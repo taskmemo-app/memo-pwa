@@ -65,7 +65,7 @@ import {
 
 import {
  getFirestore,collection,addDoc,
- getDocs,deleteDoc,doc,query,orderBy
+ getDocs,deleteDoc,doc,query,orderBy,updateDoc
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -91,7 +91,7 @@ async function loadMemos(){
  const snap=await getDocs(q);
  memos=[];
  snap.forEach(d=>memos.push({id:d.id,...d.data()}));
- memos.sort((a,b)=>(b.created||0)-(a.created||0));
+ memos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
  renderMemos();
 }
 
@@ -105,7 +105,7 @@ async function addMemo(){
 
  await addDoc(
    collection(db,"users",currentUser.uid,"memos"),
-   {text:text,created:Date.now(),notify:notify,notifyTime:notifyTime}
+   {text:text,created:Date.now(),notify:notify,notifyTime:notifyTime,pinned:false}
  );
 
  document.getElementById("memoInput").value="";
@@ -115,6 +115,19 @@ async function addMemo(){
 async function deleteMemo(id){
  if(!confirm("削除しますか？")) return;
  await deleteDoc(doc(db,"users",currentUser.uid,"memos",id));
+ await loadMemos();
+}
+
+
+async function togglePin(id,current){
+ await updateDoc(doc(db,'users',currentUser.uid,'memos',id),{pinned:!current});
+ await loadMemos();
+}
+
+async function editMemo(id,text){
+ const newText=prompt('メモを編集',text);
+ if(!newText) return;
+ await updateDoc(doc(db,'users',currentUser.uid,'memos',id),{text:newText});
  await loadMemos();
 }
 
@@ -129,9 +142,14 @@ function renderMemos(){
    div.className="memo";
    div.innerHTML=`
      <span class="delete">🗑️</span>
-     <div>${m.text}</div>${m.notify && m.notifyTime ? `<div style='color:#ff9500;margin-top:6px;'>🔔 ${m.notifyTime.replace('T',' ').replaceAll('-','/')}</div>` : ``}
+     <span class="pinBtn" style="position:absolute;right:45px;top:12px;cursor:pointer;">${m.pinned?'📌':'📍'}</span>
+     <span class="editBtn" style="position:absolute;right:75px;top:12px;cursor:pointer;">📝</span>
+     <div>${m.text}</div>
+     ${m.notify && m.notifyTime ? `<div style='color:#ff9500;margin-top:6px;'>🔔 ${m.notifyTime.replace('T',' ').replaceAll('-','/')}</div>` : ``}
    `;
    div.querySelector(".delete").onclick=()=>deleteMemo(m.id);
+   div.querySelector(".pinBtn").onclick=()=>togglePin(m.id,m.pinned);
+   div.querySelector(".editBtn").onclick=()=>editMemo(m.id,m.text);
    list.appendChild(div);
  });
 }
