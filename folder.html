@@ -3,42 +3,50 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Second Brain Explorer</title>
+<title>Second Brain Explorer v2</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#eef4ff;margin:0;padding:20px}
-button{padding:10px 14px;border:none;border-radius:12px;background:#007aff;color:#fff;margin-right:8px}
-.card{background:#fff;border-radius:14px;padding:14px;margin-top:12px}
+body{font-family:sans-serif;background:#eef4ff;padding:20px}
+.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0}
+button{background:#0a7cff;color:#fff;border:none;border-radius:12px;padding:12px 18px;margin-right:8px;cursor:pointer}
 .item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
-#treeView,#memoView{display:none;white-space:pre-wrap}
-.path{color:#666;margin-bottom:10px}
+#memoView{display:none}
+.tree{white-space:pre-wrap;font-family:monospace}
 </style>
 </head>
 <body>
 
-<h1>📁 Second Brain Explorer</h1>
-<div id="debugInfo" class="card">ログイン待機中...</div>
+<h1>📁 Second Brain Explorer 試作弐号機</h1>
+
+<div class="card">
+<div id="debugInfo">読込中...</div>
+</div>
 
 <button onclick="showFolders()">📂 フォルダ</button>
 <button onclick="showTree()">🌳 ツリー</button>
-<button onclick="location.href='index.html'">← 戻る</button>
+<button onclick="location.href='index.html'">←戻る</button>
 
 <div id="folderView" class="card">
-<div id="path" class="path">ホーム</div><button onclick="goUp()">⬆ 戻る</button>
+<div id="path">ホーム</div>
+<button onclick="goUp()">⬆ 一つ上へ</button>
 <div id="folderList"></div>
 </div>
 
-<div id="treeView" class="card"></div>
+<div id="treeView" class="card tree" style="display:none"></div>
 
 <div id="memoView" class="card">
-<div style="display:flex;justify-content:space-between;align-items:center"><h3 id="memoTitle"></h3><button onclick="closeMemo()">✖ 閉じる</button></div><div id="memoBody"></div>
+<div style="display:flex;justify-content:space-between">
+<h3 id="memoTitle"></h3>
+<button onclick="closeMemo()">✖閉じる</button>
+</div>
+<pre id="memoBody"></pre>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore,collection,getDocs,query } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
-const firebaseConfig = {
+const firebaseConfig={
  apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
  authDomain:"second-brain-b63e3.firebaseapp.com",
  projectId:"second-brain-b63e3",
@@ -53,36 +61,37 @@ const db=getFirestore(app);
 
 let root={};
 let current=root;
-let stack=[];
-
-window.closeMemo=()=>{
- document.getElementById("memoView").style.display="none";
-};
+let pathStack=[];
 
 function extractTags(text){
- return (text.match(/#\S+/g)||[]).map(v=>v.replace("#",""));
+ const lines=text.split("\n").map(v=>v.trim());
+ return lines.filter(v=>v.startsWith("#")).map(v=>v.replace(/^#/,""));
 }
 
 function buildTree(memos){
  const tree={};
 
  memos.forEach(m=>{
-   const text = m.text || m.content || m.memo || "";
+   const text=m.text||m.content||m.memo||"";
+   const title=text.split("\n")[0] || "無題";
+
    const tags=extractTags(text);
    if(tags.length===0) return;
 
    let node=tree;
 
-   tags.forEach((tag,index)=>{
-     if(index===tags.length-1){
-       if(!node[tag]) node[tag]={__memos:[]};
-       if(!node[tag].__memos) node[tag].__memos=[];
-       node[tag].__memos.push({...m,text});
-     }else{
-       if(!node[tag]) node[tag]={};
-       node=node[tag];
-     }
+   tags.forEach(tag=>{
+      if(!node[tag]) node[tag]={folders:{},memos:[]};
+      node=node[tag].folders;
    });
+
+   const lastTag=tags[tags.length-1];
+   let target=tree;
+   tags.forEach(tag=>{
+      target=target[tag];
+   });
+
+   target.memos.push({title,text});
  });
 
  return tree;
@@ -90,86 +99,85 @@ function buildTree(memos){
 
 function renderFolder(node){
  current=node;
- document.getElementById("memoView").style.display="none";
 
  const list=document.getElementById("folderList");
  list.innerHTML="";
 
- Object.keys(node).forEach(key=>{
-   if(key==="__memos") return;
+ Object.keys(node).forEach(name=>{
+   const folder=node[name];
 
    const div=document.createElement("div");
    div.className="item";
-   div.textContent="📁 "+key;
+   div.textContent="📁 "+name;
 
    div.onclick=()=>{
-     stack.push({name:key,node});
-     renderFolder(node[key]);
-     updatePath();
+      pathStack.push(name);
+      renderFolder(folder.folders);
+      renderCurrentMemos(folder.memos);
+      updatePath();
    };
 
    list.appendChild(div);
  });
+}
 
- if(node.__memos){
-   node.__memos.forEach(m=>{
+function renderCurrentMemos(memos){
+ const list=document.getElementById("folderList");
+
+ memos.forEach(m=>{
      const div=document.createElement("div");
      div.className="item";
-     div.textContent="📄 "+m.text.split("\\n")[0];
+     div.textContent="📄 "+m.title;
 
      div.onclick=()=>{
-       document.getElementById("memoView").style.display="block";
-       document.getElementById("memoTitle").textContent=m.text.split("\\n")[0];
-       document.getElementById("memoBody").textContent=m.text;
+        document.getElementById("memoView").style.display="block";
+        document.getElementById("memoTitle").textContent=m.title;
+        document.getElementById("memoBody").textContent=m.text;
      };
 
      list.appendChild(div);
-   });
- }
+ });
 }
 
-
-function goUp(){
- if(stack.length===0) return;
- stack.pop();
+function rebuildFromPath(){
  let node=root;
- stack.forEach(s=>node=node[s.name]);
+ let memos=[];
+
+ for(const p of pathStack){
+    memos=node[p].memos;
+    node=node[p].folders;
+ }
+
  renderFolder(node);
+ renderCurrentMemos(memos);
  updatePath();
 }
 
+window.goUp=()=>{
+ if(pathStack.length===0) return;
+ pathStack.pop();
+ rebuildFromPath();
+}
+
+window.closeMemo=()=>{
+ document.getElementById("memoView").style.display="none";
+}
+
 function updatePath(){
- document.getElementById("path").textContent =
- "ホーム / "+stack.map(v=>v.name).join(" / ");
+ document.getElementById("path").textContent=
+ "ホーム"+(pathStack.length?(" / "+pathStack.join(" / ")):"");
 }
 
 function makeTree(node,indent=""){
  let out="";
- for(const k in node){
-   if(k==="__memos") continue;
-   out+=indent+"📁 "+k+"\\n";
-   out+=makeTree(node[k],indent+"│  ");
-   if(node[k].__memos){
-      node[k].__memos.forEach(m=>{
-         const title=(m.text||"").split("\\n")[0];
-         out+=indent+"│  📄 "+title+"\\n";
-      });
-   }
- }
- return out;
-}
+ for(const name in node){
+   out+=indent+"📁 "+name+"\n";
 
-function _old_makeTree(node,indent=""){
- let out="";
- for(const k in node){
-   if(k==="__memos") continue;
-   out+=indent+k+"\\n";
-   out+=makeTree(node[k],indent+"  ");
-   if(node[k].__memos){
-      node[k].__memos.forEach(m=>{
-         out+=indent+"  📄 "+m.text.split("\\n")[0]+"\\n";
-      });
-   }
+   node[name].memos.forEach(m=>{
+      out+=indent+"  📄 "+m.title+"\n";
+   });
+
+   out+=makeTree(node[name].folders,indent+"  ");
  }
  return out;
 }
@@ -177,37 +185,31 @@ function _old_makeTree(node,indent=""){
 window.showFolders=()=>{
  document.getElementById("folderView").style.display="block";
  document.getElementById("treeView").style.display="none";
-};
+}
 
 window.showTree=()=>{
  document.getElementById("folderView").style.display="none";
  document.getElementById("treeView").style.display="block";
  document.getElementById("treeView").textContent=makeTree(root);
-};
+}
 
 onAuthStateChanged(auth,async(user)=>{
  if(!user){
-   document.getElementById("debugInfo").textContent="ログインしていません";
+   document.getElementById("debugInfo").textContent="未ログイン";
    return;
  }
 
- const snap=await getDocs(query(collection(db,"users",user.uid,"memos")));
+ const snap=await getDocs(collection(db,"users",user.uid,"memos"));
  const memos=[];
  snap.forEach(d=>memos.push(d.data()));
 
- document.getElementById("debugInfo").innerHTML =
- "ログイン中: " + (user.displayName || "不明") + "<br>取得件数: " + memos.length;
+ document.getElementById("debugInfo").innerHTML=
+ "ログイン中:"+ (user.displayName||"不明")+"<br>取得件数:"+memos.length;
 
  root=buildTree(memos);
-
- console.log("memos",memos);
- console.log("root",root);
-
- stack=[];
  renderFolder(root);
  updatePath();
 });
 </script>
-
 </body>
 </html>
