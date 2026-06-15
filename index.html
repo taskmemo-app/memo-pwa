@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>メモPWA</title>
+
+<style>
+body{
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+    margin:0;
+    background:#f2f2f7;
+    color:#000;
+}
+
+.container{
+    max-width:600px;
+    margin:auto;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+}
+
+.input-area{
+    display:flex;
+    gap:10px;
+}
+
+#memoInput{
+    flex:1;
+    padding:12px;
+    border-radius:12px;
+    border:1px solid #ccc;
+}
+
+button{
+    padding:12px 18px;
+    border:none;
+    border-radius:12px;
+    background:#007aff;
+    color:white;
+    cursor:pointer;
+}
+
+#searchInput{
+    width:100%;
+    padding:12px;
+    margin-top:15px;
+    border-radius:12px;
+    border:1px solid #ccc;
+    box-sizing:border-box;
+}
+
+.memo{
+    background:white;
+    margin-top:12px;
+    padding:14px;
+    border-radius:14px;
+    position:relative;
+    word-break:break-word;
+}
+
+.date{
+    color:gray;
+    font-size:12px;
+    margin-top:8px;
+}
+
+.delete{
+    position:absolute;
+    right:12px;
+    top:12px;
+    cursor:pointer;
+}
+
+.empty{
+    text-align:center;
+    color:gray;
+    margin-top:30px;
+}
+
+@media (prefers-color-scheme: dark){
+
+body{
+    background:#000;
+    color:#fff;
+}
+
+.memo{
+    background:#1c1c1e;
+}
+
+#memoInput,#searchInput{
+    background:#1c1c1e;
+    color:white;
+    border:1px solid #333;
+}
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>メモPWA</h1>
+
+<p id="count">0件</p>
+
+<div class="input-area">
+<input id="memoInput" placeholder="メモを入力">
+<button onclick="addMemo()">追加</button>
+</div>
+
+<input id="searchInput" placeholder="検索..." oninput="renderMemos()">
+
+<div id="memoList"></div>
+
+</div>
+
+<script>
+
+let memos = JSON.parse(localStorage.getItem("memos") || "[]");
+
+function saveMemos(){
+    localStorage.setItem("memos",JSON.stringify(memos));
+}
+
+function addMemo(){
+
+    const input=document.getElementById("memoInput");
+
+    const text=input.value.trim();
+
+    if(!text) return;
+
+    memos.unshift({
+        text:text,
+        date:new Date().toLocaleString()
+    });
+
+    saveMemos();
+
+    input.value="";
+
+    renderMemos();
+}
+
+function deleteMemo(index){
+
+    if(!confirm("削除しますか？")) return;
+
+    memos.splice(index,1);
+
+    saveMemos();
+
+    renderMemos();
+}
+
+function renderMemos(){
+
+    const list=document.getElementById("memoList");
+
+    const search=document.getElementById("searchInput").value.toLowerCase();
+
+    document.getElementById("count").textContent=
+        memos.length+"件";
+
+    const filtered=memos.filter(m =>
+        m.text.toLowerCase().includes(search)
+    );
+
+    if(filtered.length===0){
+
+        list.innerHTML='<div class="empty">メモがありません</div>';
+
+        return;
+    }
+
+    list.innerHTML="";
+
+    filtered.forEach((memo)=>{
+
+        const realIndex=memos.indexOf(memo);
+
+        const div=document.createElement("div");
+
+        div.className="memo";
+
+        div.innerHTML=`
+            <span class="delete" onclick="deleteMemo(${realIndex})">🗑️</span>
+            <div>${memo.text}</div>
+            <div class="date">${memo.date}</div>
+        `;
+
+        let timer;
+
+        div.addEventListener("touchstart",()=>{
+            timer=setTimeout(()=>{
+                deleteMemo(realIndex);
+            },1000);
+        });
+
+        div.addEventListener("touchend",()=>{
+            clearTimeout(timer);
+        });
+
+        list.appendChild(div);
+    });
+}
+
+document.getElementById("memoInput")
+.addEventListener("keydown",(e)=>{
+    if(e.key==="Enter"){
+        addMemo();
+    }
+});
+
+renderMemos();
+
+</script>
+
+</body>
+</html>
