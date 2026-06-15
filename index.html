@@ -13,7 +13,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background
 h1{text-align:center}
 .top-card,.memo{background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
 .top-card{padding:18px;margin-bottom:16px}
-.memo{padding:16px;margin-top:12px;position:relative}
+.memo{padding:16px;padding-right:100px;margin-top:12px;position:relative;word-break:break-word}
 .delete{position:absolute;right:12px;top:12px;cursor:pointer}
 .inputRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #memoInput{flex:1;min-width:120px}
@@ -49,7 +49,7 @@ input{background:#111827;color:#fff}
 </div>
 <input type="datetime-local" id="notifyTime" style="display:none;">
 
-<input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px">
+<input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px"><div id="tagBar" style="margin-top:10px;"></div>
 
 
 
@@ -131,12 +131,30 @@ async function editMemo(id,text){
  await loadMemos();
 }
 
+
+let selectedTag='';
+
+function extractTags(text){
+ return [...new Set((text.match(/#\S+/g)||[]))];
+}
+
+function renderTags(){
+ const tagBar=document.getElementById('tagBar');
+ const tags=[...new Set(memos.flatMap(m=>extractTags(m.text)))].sort();
+ tagBar.innerHTML='<button data-tag="">すべて</button> '+tags.map(t=>`<button data-tag="${t}">${t}</button>`).join(' ');
+ tagBar.querySelectorAll('button').forEach(btn=>{
+   btn.onclick=()=>{selectedTag=btn.dataset.tag; renderMemos();};
+ });
+}
+
 function renderMemos(){
  const search=document.getElementById("searchInput").value.toLowerCase();
  const list=document.getElementById("memoList");
  list.innerHTML="";
+ renderTags();
 
  memos.filter(m=>m.text.toLowerCase().includes(search))
+ .filter(m=>!selectedTag || extractTags(m.text).includes(selectedTag))
  .forEach(m=>{
    const div=document.createElement("div");
    div.className="memo";
@@ -144,7 +162,7 @@ function renderMemos(){
      <span class="delete">🗑️</span>
      <span class="pinBtn" style="position:absolute;right:45px;top:12px;cursor:pointer;">${m.pinned?'📌':'📍'}</span>
      <span class="editBtn" style="position:absolute;right:75px;top:12px;cursor:pointer;">📝</span>
-     <div>${m.text}</div>
+     <div>${m.text.replace(/#\S+/g,'').trim()}</div><div style='margin-top:6px;color:#007aff;'>${extractTags(m.text).join(' ')}</div>
      ${m.notify && m.notifyTime ? `<div style='color:#ff9500;margin-top:6px;'>🔔 ${m.notifyTime.replace('T',' ').replaceAll('-','/')}</div>` : ``}
    `;
    div.querySelector(".delete").onclick=()=>deleteMemo(m.id);
