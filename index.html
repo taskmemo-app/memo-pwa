@@ -195,28 +195,9 @@ document.getElementById("logoutBtn").onclick=async()=>{
 };
 
 async function setupNotifications(){
- if(!('Notification' in window)) return;
 
- const btn=document.getElementById('enableNotificationsBtn');
- const status=document.getElementById('notificationStatus');
-
- function refresh(){
-   if(Notification.permission==='granted'){
-      btn.style.display='none';
-      status.style.display='inline';
-   }
- }
- refresh();
-
- btn?.addEventListener('click', async ()=>{
-   const p=await Notification.requestPermission();
-   if(p==='granted'){
-      refresh();
-      alert('通知が有効になりました');
-   }
- });
 }
-setupNotifications();
+
 async function registerFCM(){
 
  if(!currentUser) return;
