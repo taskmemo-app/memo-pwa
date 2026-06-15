@@ -73,8 +73,7 @@ function buildTree(memos){
  const tree={};
  memos.forEach(m=>{
    const text=m.text||"";
-   const title=text.split("
-")[0]||"無題";
+const title=text.split("\n")[0]||"無題";
    const tags=extractTags(text);
    let node=tree;
    tags.forEach(tag=>{
