@@ -16,6 +16,7 @@ button{padding:10px 14px;border:none;border-radius:12px;background:#007aff;color
 <body>
 
 <h1>📁 Second Brain Explorer</h1>
+<div id="debugInfo" class="card">ログイン待機中...</div>
 
 <button onclick="showFolders()">📂 フォルダ</button>
 <button onclick="showTree()">🌳 ツリー</button>
@@ -56,14 +57,15 @@ let current=root;
 let stack=[];
 
 function extractTags(text){
- return (text.match(/#\\S+/g)||[]).map(v=>v.replace("#",""));
+ return (text.match(/#\S+/g)||[]).map(v=>v.replace("#",""));
 }
 
 function buildTree(memos){
  const tree={};
 
  memos.forEach(m=>{
-   const tags=extractTags(m.text);
+   const text = m.text || m.content || m.memo || "";
+   const tags=extractTags(text);
    if(tags.length===0) return;
 
    let node=tree;
@@ -72,7 +74,7 @@ function buildTree(memos){
      if(index===tags.length-1){
        if(!node[tag]) node[tag]={__memos:[]};
        if(!node[tag].__memos) node[tag].__memos=[];
-       node[tag].__memos.push(m);
+       node[tag].__memos.push({...m,text});
      }else{
        if(!node[tag]) node[tag]={};
        node=node[tag];
@@ -155,13 +157,23 @@ window.showTree=()=>{
 };
 
 onAuthStateChanged(auth,async(user)=>{
- if(!user) return;
+ if(!user){
+   document.getElementById("debugInfo").textContent="ログインしていません";
+   return;
+ }
 
  const snap=await getDocs(query(collection(db,"users",user.uid,"memos")));
  const memos=[];
  snap.forEach(d=>memos.push(d.data()));
 
+ document.getElementById("debugInfo").innerHTML =
+ "ログイン中: " + (user.displayName || "不明") + "<br>取得件数: " + memos.length;
+
  root=buildTree(memos);
+
+ console.log("memos",memos);
+ console.log("root",root);
+
  stack=[];
  renderFolder(root);
  updatePath();
