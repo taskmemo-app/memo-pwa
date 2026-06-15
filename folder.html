@@ -6,53 +6,166 @@
 <title>Second Brain Explorer</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#eef4ff;margin:0;padding:20px}
-.toolbar{display:flex;gap:10px;margin-bottom:16px}
-button{padding:12px;border:none;border-radius:12px;background:#007aff;color:white}
-.card{background:white;border-radius:14px;padding:14px;margin:8px 0}
-#treeView{display:none;white-space:pre-wrap;font-family:monospace}
+button{padding:10px 14px;border:none;border-radius:12px;background:#007aff;color:#fff;margin-right:8px}
+.card{background:#fff;border-radius:14px;padding:14px;margin-top:12px}
+.item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
+#treeView,#memoView{display:none;white-space:pre-wrap}
+.path{color:#666;margin-bottom:10px}
 </style>
 </head>
 <body>
 
 <h1>📁 Second Brain Explorer</h1>
 
-<div class="toolbar">
 <button onclick="showFolders()">📂 フォルダ</button>
 <button onclick="showTree()">🌳 ツリー</button>
 <button onclick="location.href='index.html'">← 戻る</button>
-</div>
 
-<div id="folderView">
-<div class="card">📁 仕事</div>
-<div class="card">📁 ゲーム制作</div>
-<div class="card">📁 趣味</div>
+<div id="folderView" class="card">
+<div id="path" class="path">ホーム</div>
+<div id="folderList"></div>
 </div>
 
 <div id="treeView" class="card"></div>
 
-<script>
-function showFolders(){
- document.getElementById('folderView').style.display='block';
- document.getElementById('treeView').style.display='none';
+<div id="memoView" class="card">
+<h3 id="memoTitle"></h3>
+<div id="memoBody"></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore,collection,getDocs,query } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+ apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
+ authDomain:"second-brain-b63e3.firebaseapp.com",
+ projectId:"second-brain-b63e3",
+ storageBucket:"second-brain-b63e3.firebasestorage.app",
+ messagingSenderId:"568440402215",
+ appId:"1:568440402215:web:a2ac2733a541fea7ccf902"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+let root={};
+let current=root;
+let stack=[];
+
+function extractTags(text){
+ return (text.match(/#\\S+/g)||[]).map(v=>v.replace("#",""));
 }
 
-function showTree(){
- document.getElementById('folderView').style.display='none';
- document.getElementById('treeView').style.display='block';
+function buildTree(memos){
+ const tree={};
 
- document.getElementById('treeView').textContent =
-`仕事
-├ Cisco
-│ ├ C1121
-│ └ Catalyst
-└ 資格
+ memos.forEach(m=>{
+   const tags=extractTags(m.text);
+   if(tags.length===0) return;
 
-ゲーム制作
-├ モデリング
-└ Unity
+   let node=tree;
 
-趣味`;
+   tags.forEach((tag,index)=>{
+     if(index===tags.length-1){
+       if(!node[tag]) node[tag]={__memos:[]};
+       if(!node[tag].__memos) node[tag].__memos=[];
+       node[tag].__memos.push(m);
+     }else{
+       if(!node[tag]) node[tag]={};
+       node=node[tag];
+     }
+   });
+ });
+
+ return tree;
 }
+
+function renderFolder(node){
+ current=node;
+ document.getElementById("memoView").style.display="none";
+
+ const list=document.getElementById("folderList");
+ list.innerHTML="";
+
+ Object.keys(node).forEach(key=>{
+   if(key==="__memos") return;
+
+   const div=document.createElement("div");
+   div.className="item";
+   div.textContent="📁 "+key;
+
+   div.onclick=()=>{
+     stack.push({name:key,node});
+     renderFolder(node[key]);
+     updatePath();
+   };
+
+   list.appendChild(div);
+ });
+
+ if(node.__memos){
+   node.__memos.forEach(m=>{
+     const div=document.createElement("div");
+     div.className="item";
+     div.textContent="📄 "+m.text.split("\\n")[0];
+
+     div.onclick=()=>{
+       document.getElementById("memoView").style.display="block";
+       document.getElementById("memoTitle").textContent=m.text.split("\\n")[0];
+       document.getElementById("memoBody").textContent=m.text;
+     };
+
+     list.appendChild(div);
+   });
+ }
+}
+
+function updatePath(){
+ document.getElementById("path").textContent =
+ "ホーム / "+stack.map(v=>v.name).join(" / ");
+}
+
+function makeTree(node,indent=""){
+ let out="";
+ for(const k in node){
+   if(k==="__memos") continue;
+   out+=indent+k+"\\n";
+   out+=makeTree(node[k],indent+"  ");
+   if(node[k].__memos){
+      node[k].__memos.forEach(m=>{
+         out+=indent+"  📄 "+m.text.split("\\n")[0]+"\\n";
+      });
+   }
+ }
+ return out;
+}
+
+window.showFolders=()=>{
+ document.getElementById("folderView").style.display="block";
+ document.getElementById("treeView").style.display="none";
+};
+
+window.showTree=()=>{
+ document.getElementById("folderView").style.display="none";
+ document.getElementById("treeView").style.display="block";
+ document.getElementById("treeView").textContent=makeTree(root);
+};
+
+onAuthStateChanged(auth,async(user)=>{
+ if(!user) return;
+
+ const snap=await getDocs(query(collection(db,"users",user.uid,"memos")));
+ const memos=[];
+ snap.forEach(d=>memos.push(d.data()));
+
+ root=buildTree(memos);
+ stack=[];
+ renderFolder(root);
+ updatePath();
+});
 </script>
 
 </body>
