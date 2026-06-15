@@ -16,7 +16,7 @@ h1{text-align:center}
 .memo{padding:16px;margin-top:12px;position:relative}
 .delete{position:absolute;right:12px;top:12px;cursor:pointer}
 .inputRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#memoInput{flex:1;min-width:250px}
+#memoInput{flex:1;min-width:120px}
 #searchInput{width:100%;box-sizing:border-box;margin-top:12px}
 input,button{padding:12px;border-radius:12px;border:1px solid #dfe3ea}
 button{background:#007aff;color:#fff;border:none}
@@ -32,16 +32,17 @@ input{background:#111827;color:#fff}
 </head>
 <body>
 <div class="container">
+<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;">
+<span id="userInfo">👤 ゲスト</span>
+<button id="loginBtn" style="margin-left:10px;">ログイン</button>
+<button id="logoutBtn" style="display:none;margin-left:10px;">ログアウト</button>
+</div>
 <h1>🧠 Second Brain</h1><div class="top-card">
-
-<button id="loginBtn">Googleログイン</button>
-<button id="logoutBtn" style="display:none">ログアウト</button>
-<p id="userInfo"></p>
 
 <div class="inputRow">
 <input id="memoInput" placeholder="メモを入力">
-<label class="notifyBox"><input type="checkbox" id="notifyCheck">🔔通知</label>
-<button id="addBtn">追加</button>
+<label class="notifyBox"><input type="checkbox" id="notifyCheck">🔔</label>
+<button id="addBtn">＋</button>
 </div>
 <input type="datetime-local" id="notifyTime" style="display:none;">
 
@@ -155,7 +156,7 @@ onAuthStateChanged(auth,async(user)=>{
    currentUser=user;
    loginBtn.style.display="none";
    logoutBtn.style.display="inline-block";
-   userInfo.textContent="こんにちは "+user.displayName+" さん";
+   userInfo.textContent="👤 "+user.displayName;
    await loadMemos();
  }else{
    currentUser=null;
@@ -163,7 +164,7 @@ onAuthStateChanged(auth,async(user)=>{
    renderMemos();
    loginBtn.style.display="inline-block";
    logoutBtn.style.display="none";
-   userInfo.textContent="";
+   userInfo.textContent="👤 ゲスト";
  }
 });
 </script>
