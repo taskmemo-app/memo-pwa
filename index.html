@@ -67,12 +67,6 @@ import {
  getFirestore,collection,addDoc,
  getDocs,deleteDoc,doc,query,orderBy,updateDoc,setDoc
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-import {
- getMessaging,
- getToken,
- onMessage
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js";
-
 const firebaseConfig = {
  apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
  authDomain:"second-brain-b63e3.firebaseapp.com",
@@ -85,7 +79,6 @@ const firebaseConfig = {
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
-const messaging=getMessaging(app);
 const provider=new GoogleAuthProvider();
 
 let currentUser=null;
@@ -198,52 +191,6 @@ async function setupNotifications(){
 
 }
 
-async function registerFCM(){
-
- if(!currentUser) return;
-
- try{
-
-   const permission =
-     await Notification.requestPermission();
-
-   if(permission!=="granted"){
-     alert("通知拒否");
-     return;
-   }
-
-   const registration =
-  await navigator.serviceWorker.register(
-    './firebase-messaging-sw.js'
-  );
-
-const token = await getToken(
-  messaging,
-  {
-    vapidKey:"BIs1ohQGbVgzllYkg5QTuUrcSFqMYTpipIQ3rOQxsNxcS3moueqJlacWaKFUi4iHQJVUTDZPZfd_K8jR0-zv0mE",
-    serviceWorkerRegistration: registration
-  }
-);
-
-   console.log(token);
-await setDoc(
-  doc(db,"users",currentUser.uid),
-  {
-    fcmToken: token
-  },
-  { merge:true }
-);
-
-   alert("FCM登録成功");
-
- }catch(err){
-
-   console.error(err);
-
- }
-
-}
-
 
 const userMenuBtn=document.getElementById('userMenuBtn');
 const userMenu=document.getElementById('userMenu');
@@ -251,26 +198,43 @@ userMenuBtn.onclick=()=>{
  userMenu.style.display=userMenu.style.display==='block'?'none':'block';
 };
 
-document.getElementById(
- 'menuNotifyBtn'
-).onclick = registerFCM;
-
-
-onMessage(
- messaging,
- payload=>{
-
-  new Notification(
-   payload.notification?.title ||
-   "Second Brain",
-   {
-    body:
-    payload.notification?.body || ""
-   }
-  );
-
  }
 );
+
+
+setInterval(async()=>{
+ if(!currentUser || Notification.permission!=="granted") return;
+
+ const now=new Date();
+
+ for(const m of memos){
+   if(!m.notify || !m.notifyTime || m.notified) continue;
+
+   const target=new Date(m.notifyTime);
+
+   if(now >= target){
+     new Notification("🧠 Second Brain",{
+       body:m.text.replace(/#\S+/g,'').trim()
+     });
+
+     try{
+       await updateDoc(
+         doc(db,"users",currentUser.uid,"memos",m.id),
+         {notified:true}
+       );
+       m.notified=true;
+     }catch(e){
+       console.error(e);
+     }
+   }
+ }
+},30000);
+
+document.getElementById('menuNotifyBtn').onclick=async()=>{
+ const p=await Notification.requestPermission();
+ alert(p==="granted" ? "通知を有効化しました" : "通知は許可されていません");
+};
+
 
 onAuthStateChanged(auth,async(user)=>{
 
@@ -298,9 +262,7 @@ onAuthStateChanged(auth,async(user)=>{
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 
-navigator.serviceWorker.register(
- './firebase-messaging-sw.js'
-);
+
 }
 </script>
 </body>
