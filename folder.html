@@ -70,21 +70,17 @@ function extractTags(text){
 
 
 function buildTree(memos){
- const tree={};
+ const tree={folders:{},memos:[]};
  memos.forEach(m=>{
    const text=m.text||"";
-   const title=(text.split("\\n")[0]||"無題").replace(/#\\S+/g,"").trim();
+   const title=(text.split("\n")[0]||"無題").replace(/#\S+/g,"").trim();
    const tags=extractTags(text);
    let node=tree;
    tags.forEach(tag=>{
-      if(!node[tag]) node[tag]={folders:{},memos:[]};
-      node=node[tag].folders;
+      if(!node.folders[tag]) node.folders[tag]={folders:{},memos:[]};
+      node=node.folders[tag];
    });
-   if(tags.length){
-      let target=tree;
-      tags.forEach(tag=>target=target[tag]);
-      target.memos.push({title,text});
-   }
+   node.memos.push({title,text});
  });
  return tree;
 }
@@ -95,8 +91,8 @@ function renderFolder(node){
  const list=document.getElementById("folderList");
  list.innerHTML="";
 
- Object.keys(node).forEach(name=>{
-   const folder=node[name];
+ Object.keys(node.folders||{}).forEach(name=>{
+   const folder=node.folders[name];
 
    const div=document.createElement("div");
    div.className="item";
@@ -133,7 +129,8 @@ function renderCurrentMemos(memos){
 
 function rebuildFromPath(){
  let node=root;
- let memos=[];
+ let memos=node.memos||[];
+ let memos=node.memos||[];
 
  for(const p of pathStack){
     memos=node[p].memos;
@@ -162,14 +159,14 @@ function updatePath(){
 
 function makeTree(node,indent=""){
  let out="";
- for(const name in node){
+ for(const name in (node.folders||{})){
    out+=indent+"📁 "+name+"\n";
 
-   node[name].memos.forEach(m=>{
+   node.folders[name].memos.forEach(m=>{
       out+=indent+"  📄 "+m.title+"\n";
    });
 
-   out+=makeTree(node[name].folders,indent+"  ");
+   out+=makeTree(node.folders[name].folders,indent+"  ");
  }
  return out;
 }
@@ -192,14 +189,16 @@ onAuthStateChanged(auth,async(user)=>{
  }
 
  const snap=await getDocs(collection(db,"users",user.uid,"memos")); console.log("loading memos");
- const memos=[];
+ const memos=node.memos||[];
  snap.forEach(d=>memos.push(d.data()));
 
+ //debug removed
+ document.getElementById("debugInfo").style.display="none";
  document.getElementById("debugInfo").innerHTML=
  "ログイン中:"+ (user.displayName||"不明")+"<br>取得件数:"+memos.length;
 
  root=buildTree(memos);
- renderFolder(root);
+ renderFolder(root); renderCurrentMemos(root.memos||[]);
  updatePath();
 });
 </script>
