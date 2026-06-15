@@ -68,32 +68,25 @@ function extractTags(text){
  return lines.filter(v=>v.startsWith("#")).map(v=>v.replace(/^#/,""));
 }
 
+
 function buildTree(memos){
  const tree={};
-
  memos.forEach(m=>{
-   const text=m.text||m.content||m.memo||"";
-   const title=text.split("\n")[0] || "無題";
-
+   const text=m.text||"";
+   const title=text.split("
+")[0]||"無題";
    const tags=extractTags(text);
-   if(tags.length===0) return;
-
    let node=tree;
-
    tags.forEach(tag=>{
       if(!node[tag]) node[tag]={folders:{},memos:[]};
       node=node[tag].folders;
    });
-
-   const lastTag=tags[tags.length-1];
-   let target=tree;
-   tags.forEach(tag=>{
-      target=target[tag];
-   });
-
-   target.memos.push({title,text});
+   if(tags.length){
+      let target=tree;
+      tags.forEach(tag=>target=target[tag]);
+      target.memos.push({title,text});
+   }
  });
-
  return tree;
 }
 
@@ -199,7 +192,7 @@ onAuthStateChanged(auth,async(user)=>{
    return;
  }
 
- const snap=await getDocs(collection(db,"users",user.uid,"memos"));
+ const snap=await getDocs(collection(db,"users",user.uid,"memos")); console.log("loading memos");
  const memos=[];
  snap.forEach(d=>memos.push(d.data()));
 

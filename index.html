@@ -49,11 +49,11 @@ input{background:#111827;color:#fff}
 </div>
 <input type="datetime-local" id="notifyTime" style="display:none;">
 
-<input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px"><div id="tagBar" style="margin-top:10px;"></div>
+<div style="margin-top:10px"><button id="filterBtn">🔍 フィルター</button><div id="filterPanel" style="display:none;margin-top:10px"></div></div>
 
 
 
-</div><div style="margin:12px 0;"><button onclick="location.href='folder.html'">📁 フォルダを見る</button></div><div id="memoList"></div>
+</div><div style="margin:12px 0;"><button onclick="location.href='folder.html'">📁 フォルダを見る</button></div><div id="memoList"></div><input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:20px">
 </div>
 
 <script type="module">
@@ -131,20 +131,25 @@ async function editMemo(id,text){
 }
 
 
-let selectedTag='';
+let selectedTags=[];
 
 function extractTags(text){
  return [...new Set((text.match(/#\S+/g)||[]))];
 }
 
+
 function renderTags(){
- const tagBar=document.getElementById('tagBar');
+ const panel=document.getElementById("filterPanel");
  const tags=[...new Set(memos.flatMap(m=>extractTags(m.text)))].sort();
- tagBar.innerHTML='<button data-tag="">すべて</button> '+tags.map(t=>`<button data-tag="${t}">${t}</button>`).join(' ');
- tagBar.querySelectorAll('button').forEach(btn=>{
-   btn.onclick=()=>{selectedTag=btn.dataset.tag; renderMemos();};
+ panel.innerHTML=tags.map(t=>`<label style="display:block"><input type="checkbox" value="${t}" ${selectedTags.includes(t)?'checked':''}> ${t}</label>`).join('');
+ panel.querySelectorAll("input").forEach(c=>{
+   c.onchange=()=>{
+     selectedTags=[...panel.querySelectorAll("input:checked")].map(v=>v.value);
+     renderMemos();
+   };
  });
 }
+
 
 function renderMemos(){
  const search=document.getElementById("searchInput").value.toLowerCase();
@@ -153,7 +158,7 @@ function renderMemos(){
  renderTags();
 
  memos.filter(m=>m.text.toLowerCase().includes(search))
- .filter(m=>!selectedTag || extractTags(m.text).includes(selectedTag))
+ .filter(m=>selectedTags.length===0 || selectedTags.every(t=>extractTags(m.text).includes(t)))
  .forEach(m=>{
    const div=document.createElement("div");
    div.className="memo";
@@ -173,6 +178,10 @@ function renderMemos(){
 
 document.getElementById("addBtn").onclick=addMemo;
 document.getElementById("searchInput").oninput=renderMemos;
+document.getElementById("filterBtn").onclick=()=>{
+ const p=document.getElementById("filterPanel");
+ p.style.display=p.style.display==="none"?"block":"none";
+};
 
 document.getElementById("notifyCheck").addEventListener("change",()=>{
  const t=document.getElementById("notifyTime");
