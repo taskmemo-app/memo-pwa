@@ -1,177 +1,20 @@
 <!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Second Brain Explorer 五号機</title>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Second Brain Explorer 六号機</title>
 <style>
 body{font-family:sans-serif;background:#eef4ff;padding:20px}
 .card{background:#fff;border-radius:16px;padding:16px;margin:12px 0}
-button{background:#0a7cff;color:#fff;border:none;border-radius:12px;padding:12px 18px;margin-right:8px;cursor:pointer}
-.item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
-.tree{white-space:pre-wrap;font-family:monospace}
-#memoView{display:none}
-</style>
-</head>
+button{background:#0a7cff;color:#fff;border:none;border-radius:12px;padding:12px 18px;margin-right:8px}
+</style></head>
 <body>
-
-<h1>📁 Second Brain Explorer 五号機</h1>
-
-<div class="card"><div id="debugInfo">読込中...</div></div>
-
-<button onclick="showFolders()">📂 フォルダ</button>
-<button onclick="showTree()">🌳 ツリー</button>
-<button onclick="location.href='index.html'">←戻る</button>
-
-<div id="folderView" class="card">
-<div id="path">ホーム</div>
-<button onclick="goUp()">⬆ 一つ上へ</button>
-<div id="folderList"></div>
+<h1>📁 Second Brain Explorer 六号機</h1>
+<div class="card">
+ホーム
+<div style="margin-top:10px">📁 テスト</div>
+<div style="margin-top:10px">📁 テスト2</div>
 </div>
-
-<div id="treeView" class="card tree" style="display:none"></div>
-
-<div id="memoView" class="card">
-<div style="display:flex;justify-content:space-between">
-<h3 id="memoTitle"></h3>
-<button onclick="closeMemo()">✖閉じる</button>
+<div class="card">
+<button>⬆ 一つ上へ</button>
+<button>🌳 ツリー</button>
 </div>
-<pre id="memoBody"></pre>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-
-const firebaseConfig={
- apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
- authDomain:"second-brain-b63e3.firebaseapp.com",
- projectId:"second-brain-b63e3",
- storageBucket:"second-brain-b63e3.firebasestorage.app",
- messagingSenderId:"568440402215",
- appId:"1:568440402215:web:a2ac2733a541fea7ccf902"
-};
-
-const app=initializeApp(firebaseConfig);
-const auth=getAuth(app);
-const db=getFirestore(app);
-
-const root={folders:{},memos:[]};
-let current=root;
-let stack=[];
-
-function extractTags(text){
- return text.split("\n").map(v=>v.trim()).filter(v=>v.startsWith("#")).map(v=>v.slice(1));
-}
-
-function buildTree(memos){
- for(const m of memos){
-   const text=m.text||m.content||"";
-   const title=text.split("\n")[0]||"無題";
-   const tags=extractTags(text);
-
-   let node=root;
-
-   for(const tag of tags){
-      if(!node.folders[tag]) node.folders[tag]={folders:{},memos:[]};
-      node=node.folders[tag];
-   }
-
-   node.memos.push({title,text});
- }
-}
-
-function renderFolder(node){
- current=node;
- const list=document.getElementById("folderList");
- list.innerHTML="";
-
- Object.entries(node.folders).forEach(([name,folder])=>{
-   const div=document.createElement("div");
-   div.className="item";
-   div.textContent="📁 "+name;
-   div.onclick=()=>{
-      stack.push(name);
-      renderFolder(folder);
-      updatePath();
-   };
-   list.appendChild(div);
- });
-
- node.memos.forEach(m=>{
-   const div=document.createElement("div");
-   div.className="item";
-   div.textContent="📄 "+m.title;
-   div.onclick=()=>{
-      memoTitle.textContent=m.title;
-      memoBody.textContent=m.text;
-      memoView.style.display="block";
-   };
-   list.appendChild(div);
- });
-}
-
-function getNode(){
- let node=root;
- for(const s of stack){
-   node=node.folders[s];
- }
- return node;
-}
-
-window.goUp=()=>{
- if(stack.length===0)return;
- stack.pop();
- renderFolder(getNode());
- updatePath();
-}
-
-window.closeMemo=()=>memoView.style.display="none";
-
-function updatePath(){
- path.textContent="ホーム"+(stack.length?" / "+stack.join(" / "):"");
-}
-
-function treeText(node,indent=""){
- let out="";
- for(const [name,f] of Object.entries(node.folders)){
-   out+=indent+"📁 "+name+"\n";
-   out+=treeText(f,indent+"  ");
- }
- for(const m of node.memos){
-   out+=indent+"📄 "+m.title+"\n";
- }
- return out;
-}
-
-window.showFolders=()=>{
- folderView.style.display="block";
- treeView.style.display="none";
-};
-
-window.showTree=()=>{
- treeView.textContent=treeText(root);
- treeView.style.display="block";
- folderView.style.display="none";
-};
-
-onAuthStateChanged(auth,async(user)=>{
- if(!user){
-   debugInfo.textContent="未ログイン";
-   return;
- }
-
- const snap=await getDocs(collection(db,"users",user.uid,"memos"));
- const memos=[];
- snap.forEach(d=>memos.push(d.data()));
-
- debugInfo.innerHTML="ログイン中:"+(user.displayName||"不明")+"<br>取得件数:"+memos.length;
-
- buildTree(memos);
- renderFolder(root);
- updatePath();
-});
-</script>
-</body>
-</html>
+</body></html>
