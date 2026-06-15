@@ -3,23 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Second Brain Explorer v2</title>
+<title>Second Brain Explorer 五号機</title>
 <style>
 body{font-family:sans-serif;background:#eef4ff;padding:20px}
 .card{background:#fff;border-radius:16px;padding:16px;margin:12px 0}
 button{background:#0a7cff;color:#fff;border:none;border-radius:12px;padding:12px 18px;margin-right:8px;cursor:pointer}
 .item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
-#memoView{display:none}
 .tree{white-space:pre-wrap;font-family:monospace}
+#memoView{display:none}
 </style>
 </head>
 <body>
 
-<h1>📁 Second Brain Explorer 試作弐号機</h1>
+<h1>📁 Second Brain Explorer 五号機</h1>
 
-<div class="card">
-<div id="debugInfo">読込中...</div>
-</div>
+<div class="card"><div id="debugInfo">読込中...</div></div>
 
 <button onclick="showFolders()">📂 フォルダ</button>
 <button onclick="showTree()">🌳 ツリー</button>
@@ -59,146 +57,118 @@ const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let root={};
+const root={folders:{},memos:[]};
 let current=root;
-let pathStack=[];
+let stack=[];
 
 function extractTags(text){
- const lines=text.split("\n").map(v=>v.trim());
- return lines.filter(v=>v.startsWith("#")).map(v=>v.replace(/^#/,""));
+ return text.split("\n").map(v=>v.trim()).filter(v=>v.startsWith("#")).map(v=>v.slice(1));
 }
 
-
 function buildTree(memos){
- const tree={};
- memos.forEach(m=>{
-   const text=m.text||"";
-const title=text.split("\n")[0]||"無題";
+ for(const m of memos){
+   const text=m.text||m.content||"";
+   const title=text.split("\n")[0]||"無題";
    const tags=extractTags(text);
-   let node=tree;
-   tags.forEach(tag=>{
-      if(!node[tag]) node[tag]={folders:{},memos:[]};
-      node=node[tag].folders;
-   });
-   if(tags.length){
-      let target=tree;
-      tags.forEach(tag=>target=target[tag]);
-      target.memos.push({title,text});
+
+   let node=root;
+
+   for(const tag of tags){
+      if(!node.folders[tag]) node.folders[tag]={folders:{},memos:[]};
+      node=node.folders[tag];
    }
- });
- return tree;
+
+   node.memos.push({title,text});
+ }
 }
 
 function renderFolder(node){
  current=node;
-
  const list=document.getElementById("folderList");
  list.innerHTML="";
 
- Object.keys(node).forEach(name=>{
-   const folder=node[name];
-
+ Object.entries(node.folders).forEach(([name,folder])=>{
    const div=document.createElement("div");
    div.className="item";
    div.textContent="📁 "+name;
-
    div.onclick=()=>{
-      pathStack.push(name);
-      renderFolder(folder.folders);
-      renderCurrentMemos(folder.memos);
+      stack.push(name);
+      renderFolder(folder);
       updatePath();
    };
+   list.appendChild(div);
+ });
 
+ node.memos.forEach(m=>{
+   const div=document.createElement("div");
+   div.className="item";
+   div.textContent="📄 "+m.title;
+   div.onclick=()=>{
+      memoTitle.textContent=m.title;
+      memoBody.textContent=m.text;
+      memoView.style.display="block";
+   };
    list.appendChild(div);
  });
 }
 
-function renderCurrentMemos(memos){
- const list=document.getElementById("folderList");
-
- memos.forEach(m=>{
-     const div=document.createElement("div");
-     div.className="item";
-     div.textContent="📄 "+m.title;
-
-     div.onclick=()=>{
-        document.getElementById("memoView").style.display="block";
-        document.getElementById("memoTitle").textContent=m.title;
-        document.getElementById("memoBody").textContent=m.text;
-     };
-
-     list.appendChild(div);
- });
-}
-
-function rebuildFromPath(){
+function getNode(){
  let node=root;
- let memos=[];
-
- for(const p of pathStack){
-    memos=node[p].memos;
-    node=node[p].folders;
+ for(const s of stack){
+   node=node.folders[s];
  }
-
- renderFolder(node);
- renderCurrentMemos(memos);
- updatePath();
+ return node;
 }
 
 window.goUp=()=>{
- if(pathStack.length===0) return;
- pathStack.pop();
- rebuildFromPath();
+ if(stack.length===0)return;
+ stack.pop();
+ renderFolder(getNode());
+ updatePath();
 }
 
-window.closeMemo=()=>{
- document.getElementById("memoView").style.display="none";
-}
+window.closeMemo=()=>memoView.style.display="none";
 
 function updatePath(){
- document.getElementById("path").textContent=
- "ホーム"+(pathStack.length?(" / "+pathStack.join(" / ")):"");
+ path.textContent="ホーム"+(stack.length?" / "+stack.join(" / "):"");
 }
 
-function makeTree(node,indent=""){
+function treeText(node,indent=""){
  let out="";
- for(const name in node){
+ for(const [name,f] of Object.entries(node.folders)){
    out+=indent+"📁 "+name+"\n";
-
-   node[name].memos.forEach(m=>{
-      out+=indent+"  📄 "+m.title+"\n";
-   });
-
-   out+=makeTree(node[name].folders,indent+"  ");
+   out+=treeText(f,indent+"  ");
+ }
+ for(const m of node.memos){
+   out+=indent+"📄 "+m.title+"\n";
  }
  return out;
 }
 
 window.showFolders=()=>{
- document.getElementById("folderView").style.display="block";
- document.getElementById("treeView").style.display="none";
-}
+ folderView.style.display="block";
+ treeView.style.display="none";
+};
 
 window.showTree=()=>{
- document.getElementById("folderView").style.display="none";
- document.getElementById("treeView").style.display="block";
- document.getElementById("treeView").textContent=makeTree(root);
-}
+ treeView.textContent=treeText(root);
+ treeView.style.display="block";
+ folderView.style.display="none";
+};
 
 onAuthStateChanged(auth,async(user)=>{
  if(!user){
-   document.getElementById("debugInfo").textContent="未ログイン";
+   debugInfo.textContent="未ログイン";
    return;
  }
 
- const snap=await getDocs(collection(db,"users",user.uid,"memos")); console.log("loading memos");
+ const snap=await getDocs(collection(db,"users",user.uid,"memos"));
  const memos=[];
  snap.forEach(d=>memos.push(d.data()));
 
- document.getElementById("debugInfo").innerHTML=
- "ログイン中:"+ (user.displayName||"不明")+"<br>取得件数:"+memos.length;
+ debugInfo.innerHTML="ログイン中:"+(user.displayName||"不明")+"<br>取得件数:"+memos.length;
 
- root=buildTree(memos);
+ buildTree(memos);
  renderFolder(root);
  updatePath();
 });
