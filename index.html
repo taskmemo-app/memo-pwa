@@ -212,13 +212,18 @@ async function registerFCM(){
      return;
    }
 
-   const token = await getToken(
-     messaging,
-     {
-       vapidKey:
-       "BIs1ohQGbVgzllYkg5QTuUrcSFqMYTpipIQ3rOQxsNxcS3moueqJlacWaKFUi4iHQJVUTDZPZfd_K8jR0-zv0mE"
-     }
-   );
+   const registration =
+  await navigator.serviceWorker.register(
+    './firebase-messaging-sw.js'
+  );
+
+const token = await getToken(
+  messaging,
+  {
+    vapidKey:"BIs1ohQGbVgzllYkg5QTuUrcSFqMYTpipIQ3rOQxsNxcS3moueqJlacWaKFUi4iHQJVUTDZPZfd_K8jR0-zv0mE",
+    serviceWorkerRegistration: registration
+  }
+);
 
    console.log(token);
 await updateDoc(
