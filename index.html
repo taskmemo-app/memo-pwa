@@ -65,7 +65,7 @@ import {
 
 import {
  getFirestore,collection,addDoc,
- getDocs,deleteDoc,doc,query,orderBy,updateDoc
+ getDocs,deleteDoc,doc,query,orderBy,updateDoc,setDoc
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import {
  getMessaging,
@@ -226,11 +226,12 @@ const token = await getToken(
 );
 
    console.log(token);
-await updateDoc(
+await setDoc(
   doc(db,"users",currentUser.uid),
   {
     fcmToken: token
-  }
+  },
+  { merge:true }
 );
 
    alert("FCM登録成功");
