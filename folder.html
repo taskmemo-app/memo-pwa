@@ -23,15 +23,14 @@ button{padding:10px 14px;border:none;border-radius:12px;background:#007aff;color
 <button onclick="location.href='index.html'">← 戻る</button>
 
 <div id="folderView" class="card">
-<div id="path" class="path">ホーム</div>
+<div id="path" class="path">ホーム</div><button onclick="goUp()">⬆ 戻る</button>
 <div id="folderList"></div>
 </div>
 
 <div id="treeView" class="card"></div>
 
 <div id="memoView" class="card">
-<h3 id="memoTitle"></h3>
-<div id="memoBody"></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><h3 id="memoTitle"></h3><button onclick="closeMemo()">✖ 閉じる</button></div><div id="memoBody"></div>
 </div>
 
 <script type="module">
@@ -55,6 +54,10 @@ const db=getFirestore(app);
 let root={};
 let current=root;
 let stack=[];
+
+window.closeMemo=()=>{
+ document.getElementById("memoView").style.display="none";
+};
 
 function extractTags(text){
  return (text.match(/#\S+/g)||[]).map(v=>v.replace("#",""));
@@ -125,12 +128,38 @@ function renderFolder(node){
  }
 }
 
+
+function goUp(){
+ if(stack.length===0) return;
+ stack.pop();
+ let node=root;
+ stack.forEach(s=>node=node[s.name]);
+ renderFolder(node);
+ updatePath();
+}
+
 function updatePath(){
  document.getElementById("path").textContent =
  "ホーム / "+stack.map(v=>v.name).join(" / ");
 }
 
 function makeTree(node,indent=""){
+ let out="";
+ for(const k in node){
+   if(k==="__memos") continue;
+   out+=indent+"📁 "+k+"\\n";
+   out+=makeTree(node[k],indent+"│  ");
+   if(node[k].__memos){
+      node[k].__memos.forEach(m=>{
+         const title=(m.text||"").split("\\n")[0];
+         out+=indent+"│  📄 "+title+"\\n";
+      });
+   }
+ }
+ return out;
+}
+
+function _old_makeTree(node,indent=""){
  let out="";
  for(const k in node){
    if(k==="__memos") continue;
