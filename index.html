@@ -67,6 +67,11 @@ import {
  getFirestore,collection,addDoc,
  getDocs,deleteDoc,doc,query,orderBy,updateDoc
 } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import {
+ getMessaging,
+ getToken,
+ onMessage
+} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-messaging.js";
 
 const firebaseConfig = {
  apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
@@ -80,6 +85,7 @@ const firebaseConfig = {
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
+const messaging=getMessaging(app);
 const provider=new GoogleAuthProvider();
 
 let currentUser=null;
@@ -211,7 +217,45 @@ async function setupNotifications(){
  });
 }
 setupNotifications();
+async function registerFCM(){
 
+ if(!currentUser) return;
+
+ try{
+
+   const permission =
+     await Notification.requestPermission();
+
+   if(permission!=="granted"){
+     alert("通知拒否");
+     return;
+   }
+
+   const token = await getToken(
+     messaging,
+     {
+       vapidKey:
+       "BIs1ohQGbVgzllYkg5QTuUrcSFqMYTpipIQ3rOQxsNxcS3moueqJlacWaKFUi4iHQJVUTDZPZfd_K8jR0-zv0mE"
+     }
+   );
+
+   console.log(token);
+await updateDoc(
+  doc(db,"users",currentUser.uid),
+  {
+    fcmToken: token
+  }
+);
+
+   alert("FCM登録成功");
+
+ }catch(err){
+
+   console.error(err);
+
+ }
+
+}
 
 
 const userMenuBtn=document.getElementById('userMenuBtn');
@@ -220,13 +264,29 @@ userMenuBtn.onclick=()=>{
  userMenu.style.display=userMenu.style.display==='block'?'none':'block';
 };
 
-document.getElementById('menuNotifyBtn').onclick=async()=>{
- if(!('Notification' in window)){ alert('通知非対応'); return; }
- const p=await Notification.requestPermission();
- if(p==='granted') alert('通知が有効になりました');
-};
+document.getElementById(
+ 'menuNotifyBtn'
+).onclick = registerFCM;
+
+
+onMessage(
+ messaging,
+ payload=>{
+
+  new Notification(
+   payload.notification?.title ||
+   "Second Brain",
+   {
+    body:
+    payload.notification?.body || ""
+   }
+  );
+
+ }
+);
 
 onAuthStateChanged(auth,async(user)=>{
+
  const loginBtn=document.getElementById("loginBtn");
  const logoutBtn=document.getElementById("logoutBtn");
  const userInfo=document.getElementById("userMenuBtn");
@@ -250,6 +310,10 @@ onAuthStateChanged(auth,async(user)=>{
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
+
+navigator.serviceWorker.register(
+ './firebase-messaging-sw.js'
+);
 }
 </script>
 </body>
