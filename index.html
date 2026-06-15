@@ -32,10 +32,13 @@ input{background:#111827;color:#fff}
 </head>
 <body>
 <div class="container">
-<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px;">
-<span id="userInfo">👤 ゲスト</span>
-<button id="loginBtn" style="margin-left:10px;">ログイン</button>
-<button id="logoutBtn" style="display:none;margin-left:10px;">ログアウト</button>
+<div style="display:flex;justify-content:flex-end;position:relative;margin-bottom:10px;">
+<button id="userMenuBtn" style="background:none;color:inherit;border:none;">👤 ゲスト ▼</button>
+<div id="userMenu" style="display:none;position:absolute;top:40px;right:0;background:white;padding:10px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;">
+<button id="menuNotifyBtn" style="display:block;width:100%;margin-bottom:6px;">🔔 通知設定</button>
+<button id="loginBtn" style="display:block;width:100%;">🔑 ログイン</button>
+<button id="logoutBtn" style="display:none;width:100%;">🚪 ログアウト</button>
+</div>
 </div>
 <h1>🧠 Second Brain</h1><div class="top-card">
 
@@ -47,10 +50,7 @@ input{background:#111827;color:#fff}
 <input type="datetime-local" id="notifyTime" style="display:none;">
 
 <input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px">
-<div id="notificationArea" style="margin-top:12px;">
-<button id="enableNotificationsBtn">🔔 通知を有効化</button>
-<span id="notificationStatus" style="display:none;color:#34c759;font-weight:bold;">🔔 通知有効</span>
-</div>
+
 
 
 </div><div id="memoList"></div>
@@ -129,7 +129,7 @@ function renderMemos(){
    div.className="memo";
    div.innerHTML=`
      <span class="delete">🗑️</span>
-     <div>${m.text}</div>${m.notify && m.notifyTime ? `<div style="color:#ff9500;margin-top:6px;">🔔 ${m.notifyTime}</div>` : ``}
+     <div>${m.text}</div>${m.notify && m.notifyTime ? `<div style='color:#ff9500;margin-top:6px;'>🔔 ${m.notifyTime.replace('T',' ').replaceAll('-','/')}</div>` : ``}
    `;
    div.querySelector(".delete").onclick=()=>deleteMemo(m.id);
    list.appendChild(div);
@@ -177,24 +177,37 @@ async function setupNotifications(){
 setupNotifications();
 
 
+
+const userMenuBtn=document.getElementById('userMenuBtn');
+const userMenu=document.getElementById('userMenu');
+userMenuBtn.onclick=()=>{
+ userMenu.style.display=userMenu.style.display==='block'?'none':'block';
+};
+
+document.getElementById('menuNotifyBtn').onclick=async()=>{
+ if(!('Notification' in window)){ alert('通知非対応'); return; }
+ const p=await Notification.requestPermission();
+ if(p==='granted') alert('通知が有効になりました');
+};
+
 onAuthStateChanged(auth,async(user)=>{
  const loginBtn=document.getElementById("loginBtn");
  const logoutBtn=document.getElementById("logoutBtn");
- const userInfo=document.getElementById("userInfo");
+ const userInfo=document.getElementById("userMenuBtn");
 
  if(user){
    currentUser=user;
-   loginBtn.style.display="none";
-   logoutBtn.style.display="inline-block";
-   userInfo.textContent="👤 "+user.displayName;
+   loginBtn.style.display="none"; logoutBtn.style.display="block";
+   
+   userInfo.textContent="👤 "+user.displayName+" ▼";
    await loadMemos();
  }else{
    currentUser=null;
    memos=[];
    renderMemos();
-   loginBtn.style.display="inline-block";
+   loginBtn.style.display="block";
    logoutBtn.style.display="none";
-   userInfo.textContent="👤 ゲスト";
+   userInfo.textContent="👤 ゲスト ▼";
  }
 });
 </script>
