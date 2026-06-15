@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#007aff">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>メモPWA Sync</title>
@@ -22,6 +24,10 @@ input,button{padding:10px}
 <p id="userInfo"></p>
 
 <input id="memoInput" placeholder="メモ">
+<label style="display:block;margin-top:10px;">
+<input type="checkbox" id="notifyCheck"> 通知する
+</label>
+<input type="datetime-local" id="notifyTime" style="display:none;margin-top:5px;">
 <button id="addBtn">追加</button>
 
 <input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px">
@@ -69,12 +75,16 @@ async function loadMemos(){
 }
 
 async function addMemo(){
+ 
  const text=document.getElementById("memoInput").value.trim();
+ const notify=document.getElementById("notifyCheck").checked;
+ const notifyTime=document.getElementById("notifyTime").value;
+
  if(!text || !currentUser) return;
 
  await addDoc(
    collection(db,"users",currentUser.uid,"memos"),
-   {text:text,created:Date.now()}
+   {text:text,created:Date.now(),notify:notify,notifyTime:notifyTime}
  );
 
  document.getElementById("memoInput").value="";
@@ -98,7 +108,7 @@ function renderMemos(){
    div.className="memo";
    div.innerHTML=`
      <span class="delete">🗑️</span>
-     <div>${m.text}</div>
+     <div>${m.text}</div>${m.notify && m.notifyTime ? `<div style="color:#ff9500;margin-top:6px;">🔔 ${m.notifyTime}</div>` : ``}
    `;
    div.querySelector(".delete").onclick=()=>deleteMemo(m.id);
    list.appendChild(div);
@@ -107,6 +117,11 @@ function renderMemos(){
 
 document.getElementById("addBtn").onclick=addMemo;
 document.getElementById("searchInput").oninput=renderMemos;
+
+document.getElementById("notifyCheck").addEventListener("change",()=>{
+ const t=document.getElementById("notifyTime");
+ t.style.display=document.getElementById("notifyCheck").checked ? "block" : "none";
+});
 
 document.getElementById("loginBtn").onclick=async()=>{
  await signInWithPopup(auth,provider);
@@ -136,6 +151,11 @@ onAuthStateChanged(auth,async(user)=>{
    userInfo.textContent="";
  }
 });
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
 </script>
 </body>
 </html>
