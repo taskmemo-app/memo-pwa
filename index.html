@@ -6,33 +6,48 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>メモPWA Sync</title>
+
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:#f2f2f7}
-.container{max-width:700px;margin:auto;padding:20px}
-.memo{background:#fff;padding:12px;border-radius:12px;margin-top:10px;position:relative}
-.delete{position:absolute;right:10px;top:10px;cursor:pointer}
-input,button{padding:10px}
-#memoInput{width:70%}
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:linear-gradient(180deg,#eef4ff,#f8f9ff);min-height:100vh}
+.container{max-width:800px;margin:auto;padding:20px}
+h1{text-align:center}
+.top-card,.memo{background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+.top-card{padding:18px;margin-bottom:16px}
+.memo{padding:16px;margin-top:12px;position:relative}
+.delete{position:absolute;right:12px;top:12px;cursor:pointer}
+.inputRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#memoInput{flex:1;min-width:250px}
+#searchInput{width:100%;box-sizing:border-box;margin-top:12px}
+input,button{padding:12px;border-radius:12px;border:1px solid #dfe3ea}
+button{background:#007aff;color:#fff;border:none}
+.notifyBox{display:flex;align-items:center;gap:6px}
+#notifyTime{margin-top:10px;width:260px}
+@media (prefers-color-scheme: dark){
+body{background:#111827;color:#fff}
+.top-card,.memo{background:#1f2937;color:#fff}
+input{background:#111827;color:#fff}
+}
 </style>
+
 </head>
 <body>
 <div class="container">
-<h1>メモPWA Sync</h1>
+<h1>🧠 Second Brain</h1><div class="top-card">
 
 <button id="loginBtn">Googleログイン</button>
 <button id="logoutBtn" style="display:none">ログアウト</button>
 <p id="userInfo"></p>
 
-<input id="memoInput" placeholder="メモ">
-<label style="display:block;margin-top:10px;">
-<input type="checkbox" id="notifyCheck"> 通知する
-</label>
-<input type="datetime-local" id="notifyTime" style="display:none;margin-top:5px;">
+<div class="inputRow">
+<input id="memoInput" placeholder="メモを入力">
+<label class="notifyBox"><input type="checkbox" id="notifyCheck">🔔通知</label>
 <button id="addBtn">追加</button>
+</div>
+<input type="datetime-local" id="notifyTime" style="display:none;">
 
 <input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px">
 
-<div id="memoList"></div>
+</div><div id="memoList"></div>
 </div>
 
 <script type="module">
