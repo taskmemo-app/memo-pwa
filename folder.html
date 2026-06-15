@@ -6,16 +6,54 @@
 <title>Second Brain Explorer</title>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#eef4ff;margin:0;padding:20px}
-.card{background:white;border-radius:14px;padding:14px;margin:8px 0;cursor:pointer}
+.toolbar{display:flex;gap:10px;margin-bottom:16px}
+button{padding:12px;border:none;border-radius:12px;background:#007aff;color:white}
+.card{background:white;border-radius:14px;padding:14px;margin:8px 0}
+#treeView{display:none;white-space:pre-wrap;font-family:monospace}
 </style>
 </head>
 <body>
-<h1>📁 Second Brain Explorer</h1>
-<p>初版フォルダ画面です。次段階でFirestoreからタグ階層を自動生成します。</p>
-<button onclick="location.href='index.html'">← メモへ戻る</button>
 
+<h1>📁 Second Brain Explorer</h1>
+
+<div class="toolbar">
+<button onclick="showFolders()">📂 フォルダ</button>
+<button onclick="showTree()">🌳 ツリー</button>
+<button onclick="location.href='index.html'">← 戻る</button>
+</div>
+
+<div id="folderView">
 <div class="card">📁 仕事</div>
 <div class="card">📁 ゲーム制作</div>
 <div class="card">📁 趣味</div>
+</div>
+
+<div id="treeView" class="card"></div>
+
+<script>
+function showFolders(){
+ document.getElementById('folderView').style.display='block';
+ document.getElementById('treeView').style.display='none';
+}
+
+function showTree(){
+ document.getElementById('folderView').style.display='none';
+ document.getElementById('treeView').style.display='block';
+
+ document.getElementById('treeView').textContent =
+`仕事
+├ Cisco
+│ ├ C1121
+│ └ Catalyst
+└ 資格
+
+ゲーム制作
+├ モデリング
+└ Unity
+
+趣味`;
+}
+</script>
+
 </body>
 </html>
