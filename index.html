@@ -47,6 +47,11 @@ input{background:#111827;color:#fff}
 <input type="datetime-local" id="notifyTime" style="display:none;">
 
 <input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:10px">
+<div id="notificationArea" style="margin-top:12px;">
+<button id="enableNotificationsBtn">🔔 通知を有効化</button>
+<span id="notificationStatus" style="display:none;color:#34c759;font-weight:bold;">🔔 通知有効</span>
+</div>
+
 
 </div><div id="memoList"></div>
 </div>
@@ -146,6 +151,31 @@ document.getElementById("loginBtn").onclick=async()=>{
 document.getElementById("logoutBtn").onclick=async()=>{
  await signOut(auth);
 };
+
+async function setupNotifications(){
+ if(!('Notification' in window)) return;
+
+ const btn=document.getElementById('enableNotificationsBtn');
+ const status=document.getElementById('notificationStatus');
+
+ function refresh(){
+   if(Notification.permission==='granted'){
+      btn.style.display='none';
+      status.style.display='inline';
+   }
+ }
+ refresh();
+
+ btn?.addEventListener('click', async ()=>{
+   const p=await Notification.requestPermission();
+   if(p==='granted'){
+      refresh();
+      alert('通知が有効になりました');
+   }
+ });
+}
+setupNotifications();
+
 
 onAuthStateChanged(auth,async(user)=>{
  const loginBtn=document.getElementById("loginBtn");
