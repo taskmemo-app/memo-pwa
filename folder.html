@@ -3,42 +3,78 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Second Brain Explorer v2</title>
+<title>Second Brain Explorer</title>
 <style>
-body{font-family:sans-serif;background:#eef4ff;padding:20px}
-.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0}
-button{background:#0a7cff;color:#fff;border:none;border-radius:12px;padding:12px 18px;margin-right:8px;cursor:pointer}
-.item{padding:10px;border-bottom:1px solid #eee;cursor:pointer}
-#memoView{display:none}
-.tree{white-space:pre-wrap;font-family:monospace}
+:root{color-scheme:light;--bg:#eef4ff;--panel:#fff;--line:#dfe6f3;--text:#182033;--muted:#6b7280;--blue:#0a7cff;--blue-soft:#e7f1ff}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}
+button,input{font:inherit}
+button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer}
+button.secondary{background:#eef2f7;color:var(--text)}
+.app{max-width:1120px;margin:0 auto;padding:18px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.bar h1{font-size:22px;margin:0}
+.status{color:var(--muted);font-size:13px}
+.layout{display:grid;grid-template-columns:260px minmax(260px,1fr) 360px;gap:12px;min-height:70vh}
+.pane{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.paneHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:700}
+.paneBody{padding:8px}
+.crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line);background:#f8fbff}
+.crumb{background:transparent;color:var(--blue);padding:4px 2px}
+.row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border-radius:6px;cursor:pointer}
+.row:hover,.row.active{background:var(--blue-soft)}
+.rowIcon{width:22px;text-align:center}
+.rowText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.empty{color:var(--muted);padding:14px 10px}
+.search{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.memoMeta{color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
+.preview{white-space:pre-wrap;line-height:1.6;margin:0}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{background:var(--blue-soft);color:#0057b8;border-radius:999px;padding:4px 8px;font-size:12px}
+@media(max-width:900px){
+ .layout{grid-template-columns:1fr}
+ .pane{min-height:180px}
+}
 </style>
 </head>
 <body>
+<div class="app">
+  <div class="bar">
+    <div>
+      <h1>Second Brain Explorer</h1>
+      <div id="status" class="status">読み込み中...</div>
+    </div>
+    <button onclick="location.href='index.html'">メモ入力へ</button>
+  </div>
 
-<h1>📁 Second Brain Explorer 試作弐号機</h1>
+  <div class="layout">
+    <section class="pane">
+      <div class="paneHeader">
+        <span>フォルダ</span>
+        <button id="rootBtn" class="secondary">ホーム</button>
+      </div>
+      <div id="folderTree" class="paneBody"></div>
+    </section>
 
-<div class="card">
-<div id="debugInfo">読込中...</div>
-</div>
+    <section class="pane">
+      <div id="crumbs" class="crumbs"></div>
+      <div class="paneBody">
+        <input id="searchInput" class="search" placeholder="この場所のメモを検索">
+        <div id="itemList"></div>
+      </div>
+    </section>
 
-<button onclick="showFolders()">📂 フォルダ</button>
-<button onclick="showTree()">🌳 ツリー</button>
-<button onclick="location.href='index.html'">←戻る</button>
-
-<div id="folderView" class="card">
-<div id="path">ホーム</div>
-<button onclick="goUp()">⬆ 一つ上へ</button>
-<div id="folderList"></div>
-</div>
-
-<div id="treeView" class="card tree" style="display:none"></div>
-
-<div id="memoView" class="card">
-<div style="display:flex;justify-content:space-between">
-<h3 id="memoTitle"></h3>
-<button onclick="closeMemo()">✖閉じる</button>
-</div>
-<pre id="memoBody"></pre>
+    <section class="pane">
+      <div class="paneHeader">
+        <span id="previewTitle">プレビュー</span>
+        <button id="closePreviewBtn" class="secondary">閉じる</button>
+      </div>
+      <div class="paneBody">
+        <pre id="previewBody" class="preview">メモを選択すると内容が表示されます。</pre>
+        <div id="previewTags" class="tags"></div>
+      </div>
+    </section>
+  </div>
 </div>
 
 <script type="module">
@@ -59,147 +95,208 @@ const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let root={};
-let current=root;
-let pathStack=[];
+let root=createNode("ホーム");
+let currentPath=[];
+let selectedMemoId=null;
 
-function extractTags(text){
- const lines=text.split("\n").map(v=>v.trim());
- return lines.filter(v=>v.startsWith("#")).map(v=>v.replace(/^#/,""));
+function createNode(name){
+ return {name,folders:{},memos:[]};
 }
 
+function extractTags(text){
+ return [...new Set((text.match(/#\S+/g)||[]).map(tag=>tag.replace(/^#/,"")))];
+}
+
+function visibleText(text){
+ return (text||"").replace(/#\S+/g,"").trim();
+}
+
+function memoTitle(text){
+ const clean=visibleText(text);
+ return clean.split("\n").find(Boolean)?.trim()||"Untitled";
+}
 
 function buildTree(memos){
- const tree={folders:{},memos:[]};
- memos.forEach(m=>{
-   const text=m.text||"";
-   const title=(text.split("\n")[0]||"無題").replace(/#\S+/g,"").trim();
+ const tree=createNode("ホーム");
+
+ memos.forEach(memo=>{
+   const text=memo.text||"";
    const tags=extractTags(text);
+   const item={...memo,title:memoTitle(text),tags};
+
+   if(tags.length===0){
+     tree.memos.push(item);
+     return;
+   }
+
    let node=tree;
    tags.forEach(tag=>{
-      if(!node.folders[tag]) node.folders[tag]={folders:{},memos:[]};
-      node=node.folders[tag];
+     if(!node.folders[tag]) node.folders[tag]=createNode(tag);
+     node=node.folders[tag];
    });
-   node.memos.push({title,text});
+   node.memos.push(item);
  });
+
  return tree;
 }
 
-function renderFolder(node){
- current=node;
-
- const list=document.getElementById("folderList");
- list.innerHTML="";
-
- Object.keys(node.folders||{}).forEach(name=>{
-   const folder=node.folders[name];
-
-   const div=document.createElement("div");
-   div.className="item";
-   div.textContent="📁 "+name;
-
-   div.onclick=()=>{
-      pathStack.push(name);
-      renderFolder(folder.folders);
-      renderCurrentMemos(folder.memos);
-      updatePath();
-   };
-
-   list.appendChild(div);
- });
-}
-
-function renderCurrentMemos(memos){
- const list=document.getElementById("folderList");
-
- memos.forEach(m=>{
-     const div=document.createElement("div");
-     div.className="item";
-     div.textContent="📄 "+m.title;
-
-     div.onclick=()=>{
-        document.getElementById("memoView").style.display="block";
-        document.getElementById("memoTitle").textContent=m.title;
-        document.getElementById("memoBody").textContent=m.text.split("\n").filter(v=>!v.trim().startsWith("#")).join("\n");
-     };
-
-     list.appendChild(div);
- });
-}
-
-function rebuildFromPath(){
+function getCurrentNode(){
  let node=root;
- let memos=node.memos||[];
- let memos=node.memos||[];
-
- for(const p of pathStack){
-    memos=node[p].memos;
-    node=node[p].folders;
+ for(const name of currentPath){
+   node=node.folders[name];
+   if(!node) return root;
  }
-
- renderFolder(node);
- renderCurrentMemos(memos);
- updatePath();
+ return node;
 }
 
-window.goUp=()=>{
- if(pathStack.length===0) return;
- pathStack.pop();
- rebuildFromPath();
+function renderAll(){
+ renderTree();
+ renderCrumbs();
+ renderItems();
 }
 
-window.closeMemo=()=>{
- document.getElementById("memoView").style.display="none";
-}
+function renderTree(){
+ const tree=document.getElementById("folderTree");
+ tree.innerHTML="";
+ const names=Object.keys(root.folders).sort();
 
-function updatePath(){
- document.getElementById("path").textContent=
- "ホーム"+(pathStack.length?(" / "+pathStack.join(" / ")):"");
-}
-
-function makeTree(node,indent=""){
- let out="";
- for(const name in (node.folders||{})){
-   out+=indent+"📁 "+name+"\n";
-
-   node.folders[name].memos.forEach(m=>{
-      out+=indent+"  📄 "+m.title+"\n";
-   });
-
-   out+=makeTree(node.folders[name].folders,indent+"  ");
- }
- return out;
-}
-
-window.showFolders=()=>{
- document.getElementById("folderView").style.display="block";
- document.getElementById("treeView").style.display="none";
-}
-
-window.showTree=()=>{
- document.getElementById("folderView").style.display="none";
- document.getElementById("treeView").style.display="block";
- document.getElementById("treeView").textContent=makeTree(root);
-}
-
-onAuthStateChanged(auth,async(user)=>{
- if(!user){
-   document.getElementById("debugInfo").textContent="未ログイン";
+ if(names.length===0){
+   tree.innerHTML='<div class="empty">タグ付きメモがありません。</div>';
    return;
  }
 
- const snap=await getDocs(collection(db,"users",user.uid,"memos")); console.log("loading memos");
- const memos=node.memos||[];
- snap.forEach(d=>memos.push(d.data()));
+ names.forEach(name=>{
+   const row=folderRow(name,[name]);
+   tree.appendChild(row);
+ });
+}
 
- //debug removed
- document.getElementById("debugInfo").style.display="none";
- document.getElementById("debugInfo").innerHTML=
- "ログイン中:"+ (user.displayName||"不明")+"<br>取得件数:"+memos.length;
+function folderRow(name,path){
+ const row=document.createElement("div");
+ row.className="row"+(currentPath.join("/")===path.join("/")?" active":"");
+ row.innerHTML='<span class="rowIcon">📁</span><span class="rowText"></span>';
+ row.querySelector(".rowText").textContent=name;
+ row.onclick=()=>{
+   currentPath=path;
+   selectedMemoId=null;
+   clearPreview();
+   renderAll();
+ };
+ return row;
+}
+
+function renderCrumbs(){
+ const crumbs=document.getElementById("crumbs");
+ crumbs.innerHTML="";
+
+ const home=document.createElement("button");
+ home.className="crumb";
+ home.textContent="ホーム";
+ home.onclick=()=>goToPath([]);
+ crumbs.appendChild(home);
+
+ currentPath.forEach((part,index)=>{
+   const sep=document.createElement("span");
+   sep.textContent="/";
+   crumbs.appendChild(sep);
+
+   const crumb=document.createElement("button");
+   crumb.className="crumb";
+   crumb.textContent=part;
+   crumb.onclick=()=>goToPath(currentPath.slice(0,index+1));
+   crumbs.appendChild(crumb);
+ });
+}
+
+function renderItems(){
+ const node=getCurrentNode();
+ const list=document.getElementById("itemList");
+ const search=document.getElementById("searchInput").value.trim().toLowerCase();
+ list.innerHTML="";
+
+ const folders=Object.keys(node.folders).sort();
+ folders.forEach(name=>{
+   const row=folderRow(name,[...currentPath,name]);
+   list.appendChild(row);
+ });
+
+ const memos=(node.memos||[]).filter(memo=>
+   !search || (memo.text||"").toLowerCase().includes(search)
+ );
+
+ memos.forEach(memo=>{
+   const row=document.createElement("div");
+   row.className="row"+(selectedMemoId===memo.id?" active":"");
+   row.innerHTML='<span class="rowIcon">📄</span><span class="rowText"></span><span class="memoMeta"></span>';
+   row.querySelector(".rowText").textContent=memo.title;
+   row.querySelector(".memoMeta").textContent=memo.created ? new Date(memo.created).toLocaleDateString("ja-JP") : "";
+   row.onclick=()=>selectMemo(memo);
+   list.appendChild(row);
+ });
+
+ if(folders.length===0 && memos.length===0){
+   list.innerHTML='<div class="empty">この場所に表示できるメモはありません。</div>';
+ }
+}
+
+function selectMemo(memo){
+ selectedMemoId=memo.id;
+ document.getElementById("previewTitle").textContent=memo.title;
+ document.getElementById("previewBody").textContent=visibleText(memo.text)||memo.text||"";
+
+ const tags=document.getElementById("previewTags");
+ tags.innerHTML="";
+ memo.tags.forEach(tag=>{
+   const span=document.createElement("span");
+   span.className="tag";
+   span.textContent="#"+tag;
+   tags.appendChild(span);
+ });
+
+ renderItems();
+}
+
+function clearPreview(){
+ document.getElementById("previewTitle").textContent="プレビュー";
+ document.getElementById("previewBody").textContent="メモを選択すると内容が表示されます。";
+ document.getElementById("previewTags").innerHTML="";
+}
+
+function goToPath(path){
+ currentPath=path;
+ selectedMemoId=null;
+ clearPreview();
+ renderAll();
+}
+
+document.getElementById("rootBtn").onclick=()=>goToPath([]);
+document.getElementById("closePreviewBtn").onclick=clearPreview;
+document.getElementById("searchInput").oninput=renderItems;
+
+onAuthStateChanged(auth,async(user)=>{
+ const status=document.getElementById("status");
+
+ if(!user){
+   status.textContent="ログインしていません。先にメモ入力画面でログインしてください。";
+   root=createNode("ホーム");
+   currentPath=[];
+   clearPreview();
+   renderAll();
+   return;
+ }
+
+ status.textContent="メモを読み込んでいます...";
+ const snap=await getDocs(collection(db,"users",user.uid,"memos"));
+ const memos=[];
+ snap.forEach(docSnap=>memos.push({id:docSnap.id,...docSnap.data()}));
+ memos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
 
  root=buildTree(memos);
- renderFolder(root); renderCurrentMemos(root.memos||[]);
- updatePath();
+ currentPath=[];
+ selectedMemoId=null;
+ clearPreview();
+ renderAll();
+ status.textContent=`${user.displayName||"ログイン中"} のメモ ${memos.length}件`;
 });
 </script>
 </body>
