@@ -25,6 +25,11 @@ button.secondary{background:#eef2f7;color:var(--text)}
 .row:hover,.row.active{background:var(--blue-soft)}
 .rowIcon{width:22px;text-align:center}
 .rowText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.treeBranch{margin:1px 0}
+.treeRow{display:grid;grid-template-columns:18px 22px minmax(0,1fr);align-items:center;width:100%;padding:7px 8px;border-radius:6px;cursor:pointer}
+.treeRow:hover,.treeRow.active{background:var(--blue-soft)}
+.treeToggle{color:var(--muted);font-size:12px;text-align:center}
+.treeChildren{margin-left:18px;border-left:1px solid var(--line);padding-left:4px}
 .empty{color:var(--muted);padding:14px 10px}
 .search{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
 .memoMeta{color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
@@ -166,9 +171,38 @@ function renderTree(){
  }
 
  names.forEach(name=>{
-   const row=folderRow(name,[name]);
-   tree.appendChild(row);
+   tree.appendChild(treeBranch(root.folders[name],[name]));
  });
+}
+
+function treeBranch(node,path){
+ const branch=document.createElement("div");
+ branch.className="treeBranch";
+
+ const row=document.createElement("div");
+ const childNames=Object.keys(node.folders||{}).sort();
+ row.className="treeRow"+(currentPath.join("/")===path.join("/")?" active":"");
+ row.innerHTML='<span class="treeToggle"></span><span class="rowIcon">刀</span><span class="rowText"></span>';
+ row.querySelector(".treeToggle").textContent=childNames.length?">":"";
+ row.querySelector(".rowText").textContent=node.name;
+ row.onclick=()=>{
+   currentPath=path;
+   selectedMemoId=null;
+   clearPreview();
+   renderAll();
+ };
+ branch.appendChild(row);
+
+ if(childNames.length){
+   const children=document.createElement("div");
+   children.className="treeChildren";
+   childNames.forEach(name=>{
+     children.appendChild(treeBranch(node.folders[name],[...path,name]));
+   });
+   branch.appendChild(children);
+ }
+
+ return branch;
 }
 
 function folderRow(name,path){
