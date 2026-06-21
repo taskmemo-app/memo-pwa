@@ -4,18 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Second Brain Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
-:root{color-scheme:light;--bg:#eef4ff;--panel:#fff;--line:#dfe6f3;--text:#182033;--muted:#6b7280;--blue:#0a7cff;--blue-soft:#e7f1ff}
+:root{--bg:#eef4ff;--panel:#fff;--line:#dfe6f3;--text:#182033;--muted:#6b7280;--blue:#0a7cff;--blue-soft:#e7f1ff;--green:#0f766e}
 *{box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:var(--bg);color:var(--text)}
-button,input{font:inherit}
+button,input,select{font:inherit}
 button{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:10px 14px;cursor:pointer}
 button.secondary{background:#eef2f7;color:var(--text)}
-.app{max-width:1120px;margin:0 auto;padding:18px}
+button.export{background:var(--green)}
+.app{max-width:1280px;margin:0 auto;padding:18px}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
 .bar h1{font-size:22px;margin:0}
 .status{color:var(--muted);font-size:13px}
-.layout{display:grid;grid-template-columns:260px minmax(260px,1fr) 360px;gap:12px;min-height:70vh}
+.actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.layout{display:grid;grid-template-columns:290px minmax(300px,1fr) 390px;gap:12px;min-height:70vh}
 .pane{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .paneHeader{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:700}
 .paneBody{padding:8px}
@@ -23,7 +26,11 @@ button.secondary{background:#eef2f7;color:var(--text)}
 .crumb{background:transparent;color:var(--blue);padding:4px 2px}
 .row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border-radius:6px;cursor:pointer}
 .row:hover,.row.active{background:var(--blue-soft)}
-.rowIcon{width:22px;text-align:center}
+.rowIcon{width:22px;display:inline-flex;justify-content:center;align-items:center}
+.folderIcon{width:18px;height:13px;border-radius:2px;background:#f8c84e;position:relative;display:inline-block;box-shadow:inset 0 -1px 0 rgba(0,0,0,.12)}
+.folderIcon:before{content:"";position:absolute;left:1px;top:-4px;width:9px;height:5px;border-radius:2px 2px 0 0;background:#f2b72f}
+.fileIcon{width:15px;height:18px;border:1px solid #8ca0bd;border-radius:2px;background:#fff;position:relative;display:inline-block}
+.fileIcon:after{content:"";position:absolute;right:-1px;top:-1px;border-left:6px solid transparent;border-bottom:6px solid #dfe6f3}
 .rowText{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .treeBranch{margin:1px 0}
 .treeRow{display:grid;grid-template-columns:18px 22px minmax(0,1fr);align-items:center;width:100%;padding:7px 8px;border-radius:6px;cursor:pointer}
@@ -34,11 +41,19 @@ button.secondary{background:#eef2f7;color:var(--text)}
 .search{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px}
 .memoMeta{color:var(--muted);font-size:12px;margin-left:auto;white-space:nowrap}
 .preview{white-space:pre-wrap;line-height:1.6;margin:0}
-.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tags,.attachments{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .tag{background:var(--blue-soft);color:#0057b8;border-radius:999px;padding:4px 8px;font-size:12px}
-@media(max-width:900px){
+.attachmentBtn{background:#f3f6fb;border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--text);font-size:13px;cursor:pointer}
+.attachmentBtn:hover{background:var(--blue-soft)}
+.attachmentPreview{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}
+.attachmentPreview img{max-width:100%;border-radius:8px;border:1px solid var(--line)}
+.attachmentPreview iframe{width:100%;height:360px;border:1px solid var(--line);border-radius:8px}
+.attachmentPreview pre{max-height:360px;overflow:auto;background:#f8fbff;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap}
+#exportMode{border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff}
+@media(max-width:980px){
  .layout{grid-template-columns:1fr}
  .pane{min-height:180px}
+ .bar{align-items:flex-start;flex-direction:column}
 }
 </style>
 </head>
@@ -49,7 +64,14 @@ button.secondary{background:#eef2f7;color:var(--text)}
       <h1>Second Brain Explorer</h1>
       <div id="status" class="status">読み込み中...</div>
     </div>
-    <button onclick="location.href='index.html'">メモ入力へ</button>
+    <div class="actions">
+      <select id="exportMode" title="出力形式">
+        <option value="text">テキストのみ</option>
+        <option value="zip">添付ファイルも含めるZIP</option>
+      </select>
+      <button id="exportBtn" class="export">出力</button>
+      <button onclick="location.href='index.html'">メモ入力へ</button>
+    </div>
   </div>
 
   <div class="layout">
@@ -77,6 +99,8 @@ button.secondary{background:#eef2f7;color:var(--text)}
       <div class="paneBody">
         <pre id="previewBody" class="preview">メモを選択すると内容が表示されます。</pre>
         <div id="previewTags" class="tags"></div>
+        <div id="previewAttachments" class="attachments"></div>
+        <div id="attachmentPreview" class="attachmentPreview"></div>
       </div>
     </section>
   </div>
@@ -86,6 +110,7 @@ button.secondary{background:#eef2f7;color:var(--text)}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
 import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getStorage,ref,getBlob } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
 const firebaseConfig={
  apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
@@ -99,8 +124,10 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
+const storage=getStorage(app);
 
 let root=createNode("ホーム");
+let allMemos=[];
 let currentPath=[];
 let selectedMemoId=null;
 
@@ -121,19 +148,29 @@ function memoTitle(text){
  return clean.split("\n").find(Boolean)?.trim()||"Untitled";
 }
 
+function formatBytes(bytes){
+ if(!bytes) return "0 B";
+ const units=["B","KB","MB","GB"];
+ let value=bytes;
+ let index=0;
+ while(value>=1024 && index<units.length-1){value/=1024;index++;}
+ return `${value.toFixed(index?1:0)} ${units[index]}`;
+}
+
+function safePathPart(value){
+ return String(value||"untitled").replace(/[\\/:*?"<>|#%{}^~[\]`]/g,"_").slice(0,80);
+}
+
 function buildTree(memos){
  const tree=createNode("ホーム");
-
  memos.forEach(memo=>{
    const text=memo.text||"";
    const tags=extractTags(text);
    const item={...memo,title:memoTitle(text),tags};
-
    if(tags.length===0){
      tree.memos.push(item);
      return;
    }
-
    let node=tree;
    tags.forEach(tag=>{
      if(!node.folders[tag]) node.folders[tag]=createNode(tag);
@@ -141,7 +178,6 @@ function buildTree(memos){
    });
    node.memos.push(item);
  });
-
  return tree;
 }
 
@@ -164,25 +200,20 @@ function renderTree(){
  const tree=document.getElementById("folderTree");
  tree.innerHTML="";
  const names=Object.keys(root.folders).sort();
-
  if(names.length===0){
    tree.innerHTML='<div class="empty">タグ付きメモがありません。</div>';
    return;
  }
-
- names.forEach(name=>{
-   tree.appendChild(treeBranch(root.folders[name],[name]));
- });
+ names.forEach(name=>tree.appendChild(treeBranch(root.folders[name],[name])));
 }
 
 function treeBranch(node,path){
  const branch=document.createElement("div");
  branch.className="treeBranch";
-
  const row=document.createElement("div");
  const childNames=Object.keys(node.folders||{}).sort();
  row.className="treeRow"+(currentPath.join("/")===path.join("/")?" active":"");
- row.innerHTML='<span class="treeToggle"></span><span class="rowIcon">刀</span><span class="rowText"></span>';
+ row.innerHTML='<span class="treeToggle"></span><span class="rowIcon"><span class="folderIcon"></span></span><span class="rowText"></span>';
  row.querySelector(".treeToggle").textContent=childNames.length?">":"";
  row.querySelector(".rowText").textContent=node.name;
  row.onclick=()=>{
@@ -192,23 +223,19 @@ function treeBranch(node,path){
    renderAll();
  };
  branch.appendChild(row);
-
  if(childNames.length){
    const children=document.createElement("div");
    children.className="treeChildren";
-   childNames.forEach(name=>{
-     children.appendChild(treeBranch(node.folders[name],[...path,name]));
-   });
+   childNames.forEach(name=>children.appendChild(treeBranch(node.folders[name],[...path,name])));
    branch.appendChild(children);
  }
-
  return branch;
 }
 
 function folderRow(name,path){
  const row=document.createElement("div");
  row.className="row"+(currentPath.join("/")===path.join("/")?" active":"");
- row.innerHTML='<span class="rowIcon">📁</span><span class="rowText"></span>';
+ row.innerHTML='<span class="rowIcon"><span class="folderIcon"></span></span><span class="rowText"></span>';
  row.querySelector(".rowText").textContent=name;
  row.onclick=()=>{
    currentPath=path;
@@ -222,18 +249,15 @@ function folderRow(name,path){
 function renderCrumbs(){
  const crumbs=document.getElementById("crumbs");
  crumbs.innerHTML="";
-
  const home=document.createElement("button");
  home.className="crumb";
  home.textContent="ホーム";
  home.onclick=()=>goToPath([]);
  crumbs.appendChild(home);
-
  currentPath.forEach((part,index)=>{
    const sep=document.createElement("span");
    sep.textContent="/";
    crumbs.appendChild(sep);
-
    const crumb=document.createElement("button");
    crumb.className="crumb";
    crumb.textContent=part;
@@ -247,28 +271,23 @@ function renderItems(){
  const list=document.getElementById("itemList");
  const search=document.getElementById("searchInput").value.trim().toLowerCase();
  list.innerHTML="";
-
- const folders=Object.keys(node.folders).sort();
- folders.forEach(name=>{
-   const row=folderRow(name,[...currentPath,name]);
-   list.appendChild(row);
- });
-
+ Object.keys(node.folders).sort().forEach(name=>list.appendChild(folderRow(name,[...currentPath,name])));
  const memos=(node.memos||[]).filter(memo=>
-   !search || (memo.text||"").toLowerCase().includes(search)
+   !search ||
+   (memo.text||"").toLowerCase().includes(search) ||
+   (memo.attachments||[]).some(file=>file.name.toLowerCase().includes(search))
  );
-
  memos.forEach(memo=>{
    const row=document.createElement("div");
+   const count=(memo.attachments||[]).length;
    row.className="row"+(selectedMemoId===memo.id?" active":"");
-   row.innerHTML='<span class="rowIcon">📄</span><span class="rowText"></span><span class="memoMeta"></span>';
+   row.innerHTML='<span class="rowIcon"><span class="fileIcon"></span></span><span class="rowText"></span><span class="memoMeta"></span>';
    row.querySelector(".rowText").textContent=memo.title;
-   row.querySelector(".memoMeta").textContent=memo.created ? new Date(memo.created).toLocaleDateString("ja-JP") : "";
+   row.querySelector(".memoMeta").textContent=count?`添付 ${count}`:(memo.created?new Date(memo.created).toLocaleDateString("ja-JP"):"");
    row.onclick=()=>selectMemo(memo);
    list.appendChild(row);
  });
-
- if(folders.length===0 && memos.length===0){
+ if(Object.keys(node.folders).length===0 && memos.length===0){
    list.innerHTML='<div class="empty">この場所に表示できるメモはありません。</div>';
  }
 }
@@ -276,8 +295,7 @@ function renderItems(){
 function selectMemo(memo){
  selectedMemoId=memo.id;
  document.getElementById("previewTitle").textContent=memo.title;
- document.getElementById("previewBody").textContent=visibleText(memo.text)||memo.text||"";
-
+ document.getElementById("previewBody").textContent=visibleText(memo.text)||memo.text||"(本文なし)";
  const tags=document.getElementById("previewTags");
  tags.innerHTML="";
  memo.tags.forEach(tag=>{
@@ -286,51 +304,184 @@ function selectMemo(memo){
    span.textContent="#"+tag;
    tags.appendChild(span);
  });
-
+ const attachments=document.getElementById("previewAttachments");
+ attachments.innerHTML="";
+ (memo.attachments||[]).forEach(file=>{
+   const button=document.createElement("button");
+   button.className="attachmentBtn";
+   button.textContent=`${file.name} / ${formatBytes(file.size)}`;
+   button.onclick=()=>previewAttachment(file);
+   attachments.appendChild(button);
+ });
+ document.getElementById("attachmentPreview").innerHTML="";
  renderItems();
 }
 
+async function previewAttachment(file){
+ const box=document.getElementById("attachmentPreview");
+ box.innerHTML=`<div class="status">読み込み中: ${file.name}</div>`;
+ if((file.type||"").startsWith("image/")){
+   box.innerHTML=`<img src="${file.url}" alt="${file.name}">`;
+   return;
+ }
+ if((file.type||"").startsWith("text/") || /\.(txt|md|csv|json|html|css|js)$/i.test(file.name)){
+   try{
+     const blob=await getAttachmentBlob(file);
+     const text=await blob.text();
+     box.innerHTML="";
+     const pre=document.createElement("pre");
+     pre.textContent=text;
+     box.appendChild(pre);
+   }catch(error){
+     box.innerHTML=`<div class="status">テキストを読み込めませんでした。<br><a href="${file.url}" target="_blank" rel="noopener">別タブで開く</a></div>`;
+   }
+   return;
+ }
+ if(file.type==="application/pdf"){
+   box.innerHTML=`<iframe src="${file.url}" title="${file.name}"></iframe>`;
+   return;
+ }
+ box.innerHTML=`<div class="status">この種類のファイルはブラウザ内プレビューに対応していません。<br><a href="${file.url}" target="_blank" rel="noopener">別タブで開く / ダウンロード</a></div>`;
+}
+
+async function getAttachmentBlob(file){
+ if(file.path){
+   return await getBlob(ref(storage,file.path));
+ }
+ return await fetch(file.url).then(res=>res.blob());
+}
+
 function clearPreview(){
+ selectedMemoId=null;
  document.getElementById("previewTitle").textContent="プレビュー";
  document.getElementById("previewBody").textContent="メモを選択すると内容が表示されます。";
  document.getElementById("previewTags").innerHTML="";
+ document.getElementById("previewAttachments").innerHTML="";
+ document.getElementById("attachmentPreview").innerHTML="";
 }
 
 function goToPath(path){
  currentPath=path;
- selectedMemoId=null;
  clearPreview();
  renderAll();
 }
 
+function collectExportLines(node,path=[]){
+ const lines=[];
+ const label=path.length?path.join(" / "):"ホーム";
+ lines.push(`## Folder: ${label}`);
+ lines.push("");
+ for(const memo of node.memos||[]){
+   lines.push(`### Memo: ${memo.title}`);
+   lines.push(`- id: ${memo.id}`);
+   lines.push(`- path: ${label}`);
+   lines.push(`- tags: ${(memo.tags||[]).map(tag=>"#"+tag).join(" ")||"(none)"}`);
+   lines.push(`- created: ${memo.created?new Date(memo.created).toISOString():""}`);
+   lines.push(`- attachments: ${(memo.attachments||[]).length}`);
+   for(const file of memo.attachments||[]){
+     lines.push(`  - ${file.name} | ${file.type||"unknown"} | ${file.size||0} bytes`);
+   }
+   lines.push("");
+   lines.push("```text");
+   lines.push(visibleText(memo.text)||memo.text||"");
+   lines.push("```");
+   lines.push("");
+ }
+ for(const name of Object.keys(node.folders||{}).sort()){
+   lines.push(...collectExportLines(node.folders[name],[...path,name]));
+ }
+ return lines;
+}
+
+function buildExportText(){
+ const lines=[
+   "# Second Brain Export",
+   `exportedAt: ${new Date().toISOString()}`,
+   `memoCount: ${allMemos.length}`,
+   "",
+   "このファイルはAI解析しやすいように、フォルダパス、タグ、本文、添付情報をテキストで並べています。",
+   ""
+ ];
+ lines.push(...collectExportLines(root));
+ return lines.join("\n");
+}
+
+function downloadBlob(blob,name){
+ const url=URL.createObjectURL(blob);
+ const link=document.createElement("a");
+ link.href=url;
+ link.download=name;
+ document.body.appendChild(link);
+ link.click();
+ link.remove();
+ URL.revokeObjectURL(url);
+}
+
+async function exportData(){
+ const mode=document.getElementById("exportMode").value;
+ const text=buildExportText();
+ const stamp=new Date().toISOString().replace(/[:.]/g,"-");
+ if(mode==="text"){
+   downloadBlob(new Blob([text],{type:"text/plain;charset=utf-8"}),`second-brain-export-${stamp}.txt`);
+   return;
+ }
+ if(!window.JSZip){
+   alert("ZIP作成ライブラリを読み込めませんでした。ネットワークを確認してください。");
+   return;
+ }
+ document.getElementById("status").textContent="ZIPを作成しています...";
+ const zip=new JSZip();
+ zip.file("second-brain-export.txt",text);
+ for(const memo of allMemos){
+   const folder=(memo.tags&&memo.tags.length?memo.tags:["home"]).map(safePathPart).join("/");
+   const memoFolder=zip.folder(`attachments/${folder}/${safePathPart(memo.title)}_${safePathPart(memo.id)}`);
+   for(const file of memo.attachments||[]){
+     try{
+       const blob=await getAttachmentBlob(file);
+       memoFolder.file(safePathPart(file.name),blob);
+     }catch(error){
+       memoFolder.file(`${safePathPart(file.name)}.download-error.txt`,`Failed to download: ${file.name}\n${file.url}`);
+     }
+   }
+ }
+ const blob=await zip.generateAsync({type:"blob"});
+ downloadBlob(blob,`second-brain-export-${stamp}.zip`);
+ document.getElementById("status").textContent=`メモ ${allMemos.length}件`;
+}
+
 document.getElementById("rootBtn").onclick=()=>goToPath([]);
-document.getElementById("closePreviewBtn").onclick=clearPreview;
+document.getElementById("closePreviewBtn").onclick=()=>{clearPreview();renderItems();};
 document.getElementById("searchInput").oninput=renderItems;
+document.getElementById("exportBtn").onclick=exportData;
 
 onAuthStateChanged(auth,async(user)=>{
  const status=document.getElementById("status");
-
  if(!user){
    status.textContent="ログインしていません。先にメモ入力画面でログインしてください。";
    root=createNode("ホーム");
+   allMemos=[];
    currentPath=[];
    clearPreview();
    renderAll();
    return;
  }
-
  status.textContent="メモを読み込んでいます...";
  const snap=await getDocs(collection(db,"users",user.uid,"memos"));
- const memos=[];
- snap.forEach(docSnap=>memos.push({id:docSnap.id,...docSnap.data()}));
- memos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
-
- root=buildTree(memos);
+ allMemos=[];
+ snap.forEach(docSnap=>{
+   const data={id:docSnap.id,...docSnap.data()};
+   data.tags=extractTags(data.text||"");
+   data.title=memoTitle(data.text||"");
+   data.attachments=data.attachments||[];
+   allMemos.push(data);
+ });
+ allMemos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
+ root=buildTree(allMemos);
  currentPath=[];
  selectedMemoId=null;
  clearPreview();
  renderAll();
- status.textContent=`${user.displayName||"ログイン中"} のメモ ${memos.length}件`;
+ status.textContent=`${user.displayName||"ログイン中"} のメモ ${allMemos.length}件`;
 });
 </script>
 </body>

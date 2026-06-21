@@ -5,69 +5,100 @@
 <meta name="theme-color" content="#007aff">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>メモPWA Sync</title>
-
+<title>Second Brain</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;background:linear-gradient(180deg,#eef4ff,#f8f9ff);min-height:100vh}
-.container{max-width:800px;margin:auto;padding:20px}
-h1{text-align:center}
-.top-card,.memo{background:#fff;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.08)}
+:root{--bg:#eef4ff;--panel:#fff;--line:#dfe6f3;--text:#182033;--muted:#6b7280;--blue:#007aff;--blue-soft:#e7f1ff;--danger:#d92d20}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:linear-gradient(180deg,#eef4ff,#f8f9ff);min-height:100vh;color:var(--text)}
+button,input,textarea{font:inherit}
+button{background:var(--blue);color:#fff;border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
+button.secondary{background:#eef2f7;color:var(--text)}
+button.danger{background:var(--danger)}
+.container{max-width:880px;margin:auto;padding:20px}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+h1{text-align:center;margin:10px 0 18px;font-size:30px}
+.userArea{position:relative}
+#userMenuBtn{background:transparent;color:inherit;border:1px solid var(--line)}
+#userMenu{display:none;position:absolute;top:44px;right:0;background:#fff;padding:10px;border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.16);z-index:1000;min-width:180px}
+#userMenu button{display:block;width:100%;margin-top:6px}
+.top-card,.memo{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
 .top-card{padding:18px;margin-bottom:16px}
-.memo{padding:16px;padding-right:100px;margin-top:12px;position:relative;word-break:break-word}
-.delete{position:absolute;right:12px;top:12px;cursor:pointer}
-.inputRow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-#memoInput{flex:1;min-width:120px}
-#searchInput{width:100%;box-sizing:border-box;margin-top:12px}
-input,button{padding:12px;border-radius:12px;border:1px solid #dfe3ea}
-button{background:#007aff;color:#fff;border:none}
-.notifyBox{display:flex;align-items:center;gap:6px}
+.inputRow{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+#memoInput{flex:1;min-width:220px;height:72px;resize:none;overflow:hidden}
+textarea,input{border:1px solid var(--line);border-radius:10px;padding:11px;background:#fff;color:var(--text)}
+.notifyBox{display:flex;align-items:center;gap:6px;padding:10px 0}
 #notifyTime{margin-top:10px;width:260px}
-@media (prefers-color-scheme: dark){
-body{background:#111827;color:#fff}
-.top-card,.memo{background:#1f2937;color:#fff}
-input{background:#111827;color:#fff}
+.fileArea{margin-top:12px;padding:12px;border:1px dashed #b9c7dc;border-radius:10px;background:#f8fbff}
+.fileControls{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#fileInput{display:none}
+.fileList{margin-top:8px;color:var(--muted);font-size:14px}
+.fileChip{display:inline-flex;align-items:center;gap:6px;background:var(--blue-soft);color:#0057b8;border-radius:999px;padding:5px 9px;margin:4px 6px 0 0}
+#searchInput{display:block;width:100%;margin-top:16px}
+.memo{padding:16px;margin-top:12px;position:relative;word-break:break-word}
+.memoActions{position:absolute;right:12px;top:12px;display:flex;gap:8px}
+.iconBtn{background:#eef2f7;color:var(--text);width:34px;height:34px;padding:0;border-radius:8px}
+.memoText{padding-right:128px;white-space:pre-wrap;line-height:1.55}
+.tags{margin-top:8px;color:var(--blue)}
+.attachments{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.attachment{background:#f3f6fb;border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--text);text-decoration:none;font-size:13px}
+.status{color:var(--muted);font-size:13px;margin-top:8px}
+@media(max-width:640px){
+ .topbar{align-items:flex-start}
+ .memoText{padding-right:0;padding-top:40px}
 }
 </style>
-
 </head>
 <body>
 <div class="container">
-<div style="display:flex;justify-content:flex-end;position:relative;margin-bottom:10px;">
-<button id="userMenuBtn" style="background:none;color:inherit;border:none;">👤 ゲスト ▼</button>
-<div id="userMenu" style="display:none;position:absolute;top:40px;right:0;background:white;padding:10px;border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:1000;">
-<button id="menuNotifyBtn" style="display:block;width:100%;margin-bottom:6px;">🔔 通知設定</button>
-<button id="loginBtn" style="display:block;width:100%;">🔑 ログイン</button>
-<button id="logoutBtn" style="display:none;width:100%;">🚪 ログアウト</button>
-</div>
-</div>
-<h1>🧠 Second Brain</h1><div class="top-card">
+  <div class="topbar">
+    <button onclick="location.href='folder.html'">フォルダを見る</button>
+    <div class="userArea">
+      <button id="userMenuBtn">ゲスト ▾</button>
+      <div id="userMenu">
+        <button id="menuNotifyBtn" class="secondary">通知を許可</button>
+        <button id="loginBtn">ログイン</button>
+        <button id="logoutBtn" class="danger" style="display:none">ログアウト</button>
+      </div>
+    </div>
+  </div>
 
-<div class="inputRow">
-<textarea id="memoInput" placeholder="メモを入力" style="flex:1;min-width:120px;height:48px;resize:none;overflow:hidden;"></textarea>
-<label class="notifyBox"><input type="checkbox" id="notifyCheck">🔔</label>
-<button id="addBtn">＋</button>
-</div>
-<input type="datetime-local" id="notifyTime" style="display:none;">
+  <h1>Second Brain</h1>
 
-<div style="margin-top:10px"><button id="filterBtn">🔍 フィルター</button><div id="filterPanel" style="display:none;margin-top:10px"></div></div>
+  <div class="top-card">
+    <div class="inputRow">
+      <textarea id="memoInput" placeholder="メモを入力。#タグ を付けるとフォルダ表示されます。"></textarea>
+      <label class="notifyBox"><input type="checkbox" id="notifyCheck">通知</label>
+      <button id="addBtn">追加</button>
+    </div>
+    <input type="datetime-local" id="notifyTime" style="display:none;">
 
+    <div class="fileArea">
+      <div class="fileControls">
+        <button id="chooseFileBtn" class="secondary">ファイルを添付</button>
+        <span class="status">画像、テキスト、PDFなどをメモに添付できます。</span>
+      </div>
+      <input type="file" id="fileInput" multiple>
+      <div id="selectedFiles" class="fileList">選択中のファイルはありません。</div>
+      <div id="uploadStatus" class="status"></div>
+    </div>
 
+    <div style="margin-top:12px">
+      <button id="filterBtn" class="secondary">フィルター</button>
+      <div id="filterPanel" style="display:none;margin-top:10px"></div>
+    </div>
+  </div>
 
-</div><div style="margin:12px 0;"><button onclick="location.href='folder.html'">📁 フォルダを見る</button></div><div id="memoList"></div><input id="searchInput" placeholder="検索" style="display:block;width:100%;margin-top:20px">
+  <div id="memoList"></div>
+  <input id="searchInput" placeholder="検索">
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
-import {
- getAuth,GoogleAuthProvider,signInWithPopup,
- signOut,onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore,collection,addDoc,getDocs,deleteDoc,doc,query,updateDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getStorage,ref,uploadBytes,getDownloadURL,deleteObject } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
-import {
- getFirestore,collection,addDoc,
- getDocs,deleteDoc,doc,query,orderBy,updateDoc,setDoc
-} from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
-const firebaseConfig = {
+const firebaseConfig={
  apiKey:"AIzaSyALRTOJ0RectT5UFjKh01sTc-Wql9uYSpk",
  authDomain:"second-brain-b63e3.firebaseapp.com",
  projectId:"second-brain-b63e3",
@@ -79,15 +110,67 @@ const firebaseConfig = {
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=getFirestore(app);
+const storage=getStorage(app);
 const provider=new GoogleAuthProvider();
 
 let currentUser=null;
 let memos=[];
+let selectedFiles=[];
+let selectedTags=[];
+
+function safeFileName(name){
+ return name.replace(/[\\/:*?"<>|#%{}^~[\]`]/g,"_").slice(0,120);
+}
+
+function extractTags(text){
+ return [...new Set((text.match(/#\S+/g)||[]))];
+}
+
+function visibleText(text){
+ return (text||"").replace(/#\S+/g,"").trim();
+}
+
+function formatBytes(bytes){
+ if(!bytes) return "0 B";
+ const units=["B","KB","MB","GB"];
+ let value=bytes;
+ let index=0;
+ while(value>=1024 && index<units.length-1){value/=1024;index++;}
+ return `${value.toFixed(index?1:0)} ${units[index]}`;
+}
+
+function renderSelectedFiles(){
+ const box=document.getElementById("selectedFiles");
+ if(selectedFiles.length===0){
+   box.textContent="選択中のファイルはありません。";
+   return;
+ }
+ box.innerHTML=selectedFiles.map(file=>`<span class="fileChip">${file.name} / ${formatBytes(file.size)}</span>`).join("");
+}
+
+async function uploadSelectedFiles(memoIdSeed){
+ const attachments=[];
+ for(const file of selectedFiles){
+   const path=`users/${currentUser.uid}/attachments/${memoIdSeed}/${Date.now()}_${safeFileName(file.name)}`;
+   document.getElementById("uploadStatus").textContent=`アップロード中: ${file.name}`;
+   const fileRef=ref(storage,path);
+   await uploadBytes(fileRef,file,{contentType:file.type||"application/octet-stream"});
+   const url=await getDownloadURL(fileRef);
+   attachments.push({
+     name:file.name,
+     type:file.type||"application/octet-stream",
+     size:file.size,
+     path,
+     url,
+     uploadedAt:Date.now()
+   });
+ }
+ return attachments;
+}
 
 async function loadMemos(){
  if(!currentUser) return;
- const q=query(collection(db,"users",currentUser.uid,"memos"));
- const snap=await getDocs(q);
+ const snap=await getDocs(query(collection(db,"users",currentUser.uid,"memos")));
  memos=[];
  snap.forEach(d=>memos.push({id:d.id,...d.data()}));
  memos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
@@ -95,53 +178,71 @@ async function loadMemos(){
 }
 
 async function addMemo(){
- 
  const text=document.getElementById("memoInput").value.trim();
  const notify=document.getElementById("notifyCheck").checked;
  const notifyTime=document.getElementById("notifyTime").value;
 
- if(!text || !currentUser) return;
+ if(!currentUser){
+   alert("先にログインしてください。");
+   return;
+ }
+ if(!text && selectedFiles.length===0) return;
 
- await addDoc(
-   collection(db,"users",currentUser.uid,"memos"),
-   {text:text,created:Date.now(),notify:notify,notifyTime:notifyTime,pinned:false}
- );
-
- document.getElementById("memoInput").value="";
- await loadMemos();
+ document.getElementById("addBtn").disabled=true;
+ try{
+   const seed=String(Date.now());
+   const attachments=await uploadSelectedFiles(seed);
+   await addDoc(collection(db,"users",currentUser.uid,"memos"),{
+     text,
+     created:Date.now(),
+     notify,
+     notifyTime,
+     pinned:false,
+     attachments
+   });
+   document.getElementById("memoInput").value="";
+   document.getElementById("memoInput").style.height="72px";
+   document.getElementById("fileInput").value="";
+   selectedFiles=[];
+   renderSelectedFiles();
+   document.getElementById("uploadStatus").textContent="";
+   await loadMemos();
+ }catch(error){
+   console.error(error);
+   alert("保存に失敗しました。Firebase Storageの設定や使用量を確認してください。");
+ }finally{
+   document.getElementById("addBtn").disabled=false;
+ }
 }
 
 async function deleteMemo(id){
- if(!confirm("削除しますか？")) return;
+ if(!confirm("このメモを削除しますか？")) return;
+ const memo=memos.find(item=>item.id===id);
  await deleteDoc(doc(db,"users",currentUser.uid,"memos",id));
+ if(memo?.attachments?.length){
+   await Promise.allSettled(memo.attachments.filter(file=>file.path).map(file=>deleteObject(ref(storage,file.path))));
+ }
  await loadMemos();
 }
 
-
 async function togglePin(id,current){
- await updateDoc(doc(db,'users',currentUser.uid,'memos',id),{pinned:!current});
+ await updateDoc(doc(db,"users",currentUser.uid,"memos",id),{pinned:!current});
  await loadMemos();
 }
 
 async function editMemo(id,text){
- const newText=prompt('メモを編集',text);
- if(!newText) return;
- await updateDoc(doc(db,'users',currentUser.uid,'memos',id),{text:newText});
+ const newText=prompt("メモを編集",text);
+ if(newText===null) return;
+ await updateDoc(doc(db,"users",currentUser.uid,"memos",id),{text:newText});
  await loadMemos();
 }
 
-
-let selectedTags=[];
-
-function extractTags(text){
- return [...new Set((text.match(/#\S+/g)||[]))];
-}
-
-
 function renderTags(){
  const panel=document.getElementById("filterPanel");
- const tags=[...new Set(memos.flatMap(m=>extractTags(m.text)))].sort();
- panel.innerHTML=tags.map(t=>`<label style="display:block"><input type="checkbox" value="${t}" ${selectedTags.includes(t)?'checked':''}> ${t}</label>`).join('');
+ const tags=[...new Set(memos.flatMap(m=>extractTags(m.text||"")))].sort();
+ panel.innerHTML=tags.length
+   ? tags.map(t=>`<label style="display:block"><input type="checkbox" value="${t}" ${selectedTags.includes(t)?"checked":""}> ${t}</label>`).join("")
+   : "<div class='status'>タグ付きメモはありません。</div>";
  panel.querySelectorAll("input").forEach(c=>{
    c.onchange=()=>{
      selectedTags=[...panel.querySelectorAll("input:checked")].map(v=>v.value);
@@ -150,116 +251,96 @@ function renderTags(){
  });
 }
 
-
 function renderMemos(){
  const search=document.getElementById("searchInput").value.toLowerCase();
  const list=document.getElementById("memoList");
  list.innerHTML="";
  renderTags();
 
- memos.filter(m=>m.text.toLowerCase().includes(search))
- .filter(m=>selectedTags.length===0 || selectedTags.every(t=>extractTags(m.text).includes(t)))
+ memos.filter(m=>(m.text||"").toLowerCase().includes(search) || (m.attachments||[]).some(file=>file.name.toLowerCase().includes(search)))
+ .filter(m=>selectedTags.length===0 || selectedTags.every(t=>extractTags(m.text||"").includes(t)))
  .forEach(m=>{
    const div=document.createElement("div");
    div.className="memo";
+   const tags=extractTags(m.text||"");
+   const attachments=m.attachments||[];
    div.innerHTML=`
-     <span class="delete">🗑️</span>
-     <span class="pinBtn" style="position:absolute;right:45px;top:12px;cursor:pointer;">${m.pinned?'📌':'📍'}</span>
-     <span class="editBtn" style="position:absolute;right:75px;top:12px;cursor:pointer;">📝</span>
-     <div>${m.text.replace(/#\S+/g,'').trim()}</div><div style='margin-top:6px;color:#007aff;'>${extractTags(m.text).join(' ')}</div>
-     ${m.notify && m.notifyTime ? `<div style='color:#ff9500;margin-top:6px;'>🔔 ${m.notifyTime.replace('T',' ').replaceAll('-','/')}</div>` : ``}
+     <div class="memoActions">
+       <button class="iconBtn editBtn" title="編集">編集</button>
+       <button class="iconBtn pinBtn" title="ピン留め">${m.pinned?"★":"☆"}</button>
+       <button class="iconBtn deleteBtn" title="削除">削除</button>
+     </div>
+     <div class="memoText">${visibleText(m.text)||"(本文なし)"}</div>
+     ${tags.length?`<div class="tags">${tags.join(" ")}</div>`:""}
+     ${m.notify && m.notifyTime ? `<div class="status">通知 ${m.notifyTime.replace("T"," ").replaceAll("-","/")}</div>` : ""}
+     ${attachments.length?`<div class="attachments">${attachments.map(file=>`<a class="attachment" href="${file.url}" target="_blank" rel="noopener">${file.name} / ${formatBytes(file.size)}</a>`).join("")}</div>`:""}
    `;
-   div.querySelector(".delete").onclick=()=>deleteMemo(m.id);
+   div.querySelector(".deleteBtn").onclick=()=>deleteMemo(m.id);
    div.querySelector(".pinBtn").onclick=()=>togglePin(m.id,m.pinned);
-   div.querySelector(".editBtn").onclick=()=>editMemo(m.id,m.text);
+   div.querySelector(".editBtn").onclick=()=>editMemo(m.id,m.text||"");
    list.appendChild(div);
  });
 }
 
 document.getElementById("addBtn").onclick=addMemo;
 document.getElementById("searchInput").oninput=renderMemos;
+document.getElementById("chooseFileBtn").onclick=()=>document.getElementById("fileInput").click();
+document.getElementById("fileInput").onchange=(event)=>{
+ selectedFiles=[...event.target.files];
+ renderSelectedFiles();
+};
 document.getElementById("filterBtn").onclick=()=>{
- const p=document.getElementById("filterPanel");
- p.style.display=p.style.display==="none"?"block":"none";
+ const panel=document.getElementById("filterPanel");
+ panel.style.display=panel.style.display==="none"?"block":"none";
+};
+document.getElementById("notifyCheck").onchange=()=>{
+ document.getElementById("notifyTime").style.display=document.getElementById("notifyCheck").checked?"block":"none";
+};
+document.getElementById("loginBtn").onclick=()=>signInWithPopup(auth,provider);
+document.getElementById("logoutBtn").onclick=()=>signOut(auth);
+document.getElementById("menuNotifyBtn").onclick=async()=>{
+ const permission=await Notification.requestPermission();
+ alert(permission==="granted"?"通知を許可しました。":"通知は許可されませんでした。");
 };
 
-document.getElementById("notifyCheck").addEventListener("change",()=>{
- const t=document.getElementById("notifyTime");
- t.style.display=document.getElementById("notifyCheck").checked ? "block" : "none";
-});
-
-document.getElementById("loginBtn").onclick=async()=>{
- await signInWithPopup(auth,provider);
-};
-
-document.getElementById("logoutBtn").onclick=async()=>{
- await signOut(auth);
-};
-
-async function setupNotifications(){
-
-}
-
-
-const userMenuBtn=document.getElementById('userMenuBtn');
-const userMenu=document.getElementById('userMenu');
+const userMenuBtn=document.getElementById("userMenuBtn");
+const userMenu=document.getElementById("userMenu");
 userMenuBtn.onclick=()=>{
- userMenu.style.display=userMenu.style.display==='block'?'none':'block';
+ userMenu.style.display=userMenu.style.display==="block"?"none":"block";
 };
-
 
 setInterval(async()=>{
  if(!currentUser || Notification.permission!=="granted") return;
-
  const now=new Date();
-
- for(const m of memos){
-   if(!m.notify || !m.notifyTime || m.notified) continue;
-
-   const target=new Date(m.notifyTime);
-
-   if(now >= target){
-     new Notification("🧠 Second Brain",{
-       body:m.text.replace(/#\S+/g,'').trim()
-     });
-
+ for(const memo of memos){
+   if(!memo.notify || !memo.notifyTime || memo.notified) continue;
+   if(now>=new Date(memo.notifyTime)){
+     new Notification("Second Brain",{body:visibleText(memo.text)});
      try{
-       await updateDoc(
-         doc(db,"users",currentUser.uid,"memos",m.id),
-         {notified:true}
-       );
-       m.notified=true;
-     }catch(e){
-       console.error(e);
+       await updateDoc(doc(db,"users",currentUser.uid,"memos",memo.id),{notified:true});
+       memo.notified=true;
+     }catch(error){
+       console.error(error);
      }
    }
  }
 },30000);
 
-
 const memoInput=document.getElementById("memoInput");
 memoInput.addEventListener("input",()=>{
- memoInput.style.height="48px";
+ memoInput.style.height="72px";
  memoInput.style.height=memoInput.scrollHeight+"px";
 });
 
-document.getElementById('menuNotifyBtn').onclick=async()=>{
- const p=await Notification.requestPermission();
- alert(p==="granted" ? "通知を有効化しました" : "通知は許可されていません");
-};
-
-
 onAuthStateChanged(auth,async(user)=>{
-
  const loginBtn=document.getElementById("loginBtn");
  const logoutBtn=document.getElementById("logoutBtn");
  const userInfo=document.getElementById("userMenuBtn");
-
  if(user){
    currentUser=user;
-   loginBtn.style.display="none"; logoutBtn.style.display="block";
-   
-   userInfo.textContent="👤 "+user.displayName+" ▼";
+   loginBtn.style.display="none";
+   logoutBtn.style.display="block";
+   userInfo.textContent=`${user.displayName||"ログイン中"} ▾`;
    await loadMemos();
  }else{
    currentUser=null;
@@ -267,15 +348,13 @@ onAuthStateChanged(auth,async(user)=>{
    renderMemos();
    loginBtn.style.display="block";
    logoutBtn.style.display="none";
-   userInfo.textContent="👤 ゲスト ▼";
+   userInfo.textContent="ゲスト ▾";
  }
 });
 </script>
 <script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js');
-
-
+if("serviceWorker" in navigator){
+ navigator.serviceWorker.register("./sw.js");
 }
 </script>
 </body>
