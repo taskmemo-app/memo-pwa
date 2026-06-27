@@ -126,6 +126,8 @@ transform:translateY(0);
         編集
     </button>
 
+    <button id="pinMemoBtn">📌 ピン留め</button>
+
     <button id="deleteMemoBtn">
         削除
     </button>
@@ -332,7 +334,7 @@ function renderItems(){
    const count=(memo.attachments||[]).length;
    row.className="row"+(selectedMemoId===memo.id?" active":"");
    row.innerHTML='<span class="rowIcon"><span class="fileIcon"></span></span><span class="rowText"></span><span class="memoMeta"></span>';
-   row.querySelector(".rowText").textContent=memo.title;
+   row.querySelector(".rowText").textContent=(memo.pinned?"📌 ":"")+memo.title;
    row.querySelector(".memoMeta").textContent=count?`添付 ${count}`:(memo.created?new Date(memo.created).toLocaleDateString("ja-JP"):"");
    row.onclick=()=>{saveScrollPosition();selectMemo(memo);};
    list.appendChild(row);
@@ -460,6 +462,22 @@ await updateDoc(
 await loadMemos();
 
 showToast("保存しました");
+}
+
+
+async function togglePinned(){
+ if(!selectedMemoId){
+   showToast("先にメモを選択してください");
+   return;
+ }
+ const memo=allMemos.find(m=>m.id===selectedMemoId);
+ if(!memo) return;
+ await updateDoc(
+   doc(db,"users",auth.currentUser.uid,"memos",memo.id),
+   { pinned: !memo.pinned }
+ );
+ await loadMemos();
+ showToast(!memo.pinned?"ピン留めしました":"ピン留め解除しました");
 }
 
 async function deleteSelectedMemo(){
@@ -590,6 +608,7 @@ document.getElementById("searchInput").oninput=renderItems;
 document.getElementById("exportBtn").onclick=exportData;
 
 document.getElementById("editMemoBtn").onclick=editSelectedMemo;
+document.getElementById("pinMemoBtn").onclick=togglePinned;
 document.getElementById("deleteMemoBtn").onclick=deleteSelectedMemo;
 
 async function loadMemos(){
