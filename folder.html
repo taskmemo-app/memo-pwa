@@ -100,6 +100,11 @@ button.export{background:var(--green)}
         <pre id="previewBody" class="preview">メモを選択すると内容が表示されます。</pre>
         <div id="previewTags" class="tags"></div>
         <div id="previewAttachments" class="attachments"></div>
+   	<div style="margin-top:16px">
+        <button id="editMemoBtn">
+            編集
+        </button>
+    	</div>
         <div id="attachmentPreview" class="attachmentPreview"></div>
       </div>
     </section>
@@ -109,7 +114,7 @@ button.export{background:var(--green)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore,collection,getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore,collection,getDocs,updateDoc,doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { getStorage,ref,getBlob } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
 const firebaseConfig={
@@ -360,6 +365,25 @@ function clearPreview(){
  document.getElementById("attachmentPreview").innerHTML="";
 }
 
+async function editSelectedMemo(){
+
+    if(!selectedMemoId){
+        alert("先にメモを選択してください。");
+        return;
+    }
+
+    const memo = allMemos.find(
+        m => m.id === selectedMemoId
+    );
+
+    if(!memo){
+        alert("メモが見つかりません。");
+        return;
+    }
+
+    alert("編集機能は次のSTEPで実装します。");
+}
+
 function goToPath(path){
  currentPath=path;
  clearPreview();
@@ -453,6 +477,8 @@ document.getElementById("rootBtn").onclick=()=>goToPath([]);
 document.getElementById("closePreviewBtn").onclick=()=>{clearPreview();renderItems();};
 document.getElementById("searchInput").oninput=renderItems;
 document.getElementById("exportBtn").onclick=exportData;
+
+document.getElementById("editMemoBtn").onclick=editSelectedMemo;
 
 onAuthStateChanged(auth,async(user)=>{
  const status=document.getElementById("status");
