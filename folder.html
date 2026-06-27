@@ -120,7 +120,7 @@ button.export{background:var(--green)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth,onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore,collection,getDocs,updateDoc,doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore,collection,getDocs,updateDoc,deleteDoc,doc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 import { getStorage,ref,getBlob } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-storage.js";
 
 const firebaseConfig={
@@ -430,9 +430,7 @@ async function deleteSelectedMemo(){
         return;
     }
 
-    const memo = allMemos.find(
-        m => m.id === selectedMemoId
-    );
+    const memo=allMemos.find(m=>m.id===selectedMemoId);
 
     if(!memo){
         alert("メモが見つかりません。");
@@ -443,10 +441,20 @@ async function deleteSelectedMemo(){
         return;
     }
 
-    alert("次のSTEPで削除します。");
+    await deleteDoc(
+        doc(
+            db,
+            "users",
+            auth.currentUser.uid,
+            "memos",
+            memo.id
+        )
+    );
 
+    await loadMemos();
+
+    alert("削除しました！");
 }
-
 
 function goToPath(path){
  currentPath=path;
