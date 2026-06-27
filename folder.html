@@ -98,6 +98,7 @@ transform:translateY(0);
     <section class="pane">
       <div class="paneHeader">
         <span>フォルダ</span>
+        <button id="renameFolderBtn" class="secondary">フォルダ名変更</button>
         <button id="rootBtn" class="secondary">ホーム</button>
       </div>
       <div id="folderTree" class="paneBody"></div>
@@ -530,6 +531,35 @@ async function deleteSelectedMemo(){
     showToast("削除しました");
 }
 
+
+async function renameCurrentFolder(){
+ if(currentPath.length===0){
+   showToast("ホームは変更できません");
+   return;
+ }
+ const oldName=currentPath[currentPath.length-1];
+ const newName=prompt("新しいフォルダ名",oldName);
+ if(!newName||newName===oldName)return;
+
+ const target="#"+oldName;
+ const replacement="#"+newName;
+
+ const targets=allMemos.filter(m=>(m.tags||[]).includes(oldName));
+ if(targets.length===0){
+   showToast("対象メモがありません");
+   return;
+ }
+
+ for(const memo of targets){
+   const newText=(memo.text||"").replaceAll(target,replacement);
+   await updateDoc(doc(db,"users",auth.currentUser.uid,"memos",memo.id),{text:newText});
+ }
+ currentPath[currentPath.length-1]=newName;
+ await loadMemos();
+ showToast("フォルダ名を変更しました");
+}
+
+
 function goToPath(path){
  currentPath=path;
  clearPreview();
@@ -619,6 +649,7 @@ async function exportData(){
  document.getElementById("status").textContent=`メモ ${allMemos.length}件`;
 }
 
+document.getElementById("renameFolderBtn").onclick=renameCurrentFolder;
 document.getElementById("rootBtn").onclick=()=>goToPath([]);
 document.getElementById("closePreviewBtn").onclick=()=>{clearPreview();renderItems();};
 document.getElementById("searchInput").oninput=renderItems;
