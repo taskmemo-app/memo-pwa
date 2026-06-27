@@ -381,7 +381,29 @@ async function editSelectedMemo(){
         return;
     }
 
-    alert("編集機能は次のSTEPで実装します。");
+const newText = prompt(
+    "メモを編集",
+    memo.text
+);
+
+if(newText === null){
+    return;
+}
+
+await updateDoc(
+    doc(
+        db,
+        "users",
+        auth.currentUser.uid,
+        "memos",
+        memo.id
+    ),
+    {
+        text: newText
+    }
+);
+
+alert("保存しました！");
 }
 
 function goToPath(path){
