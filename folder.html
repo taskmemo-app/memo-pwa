@@ -387,13 +387,7 @@ async function editSelectedMemo(){
         return;
     }
 
-    if(!confirm("このメモを削除しますか？")){
-        return;
-    }
-
-    alert("次のSTEPで削除します。");
-
-
+    
 const newText = prompt(
     "メモを編集",
     memo.text
@@ -579,15 +573,32 @@ console.log("loadMemos 開始");
    ((b.created||0)-(a.created||0))
  );
 
+ const keepPath=[...currentPath];
+ const keepSelected=selectedMemoId;
+
  root=buildTree(allMemos);
 
- currentPath=[];
+ currentPath=keepPath;
 
- selectedMemoId=null;
-
- clearPreview();
+ let node=root;
+ for(const p of keepPath){
+   if(!node.folders[p]){
+     currentPath=[];
+     break;
+   }
+   node=node.folders[p];
+ }
 
  renderAll();
+
+ if(keepSelected){
+   const memo=allMemos.find(m=>m.id===keepSelected);
+   if(memo){
+     selectMemo(memo);
+   }else{
+     clearPreview();
+   }
+ }
 
  status.textContent=`${auth.currentUser.displayName||"ログイン中"} のメモ ${allMemos.length}件`;
 
