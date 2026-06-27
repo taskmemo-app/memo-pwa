@@ -162,6 +162,7 @@ let root=createNode("ホーム");
 let allMemos=[];
 let currentPath=[];
 let selectedMemoId=null;
+let openFolders=new Set();
 
 function createNode(name){
  return {name,folders:{},memos:[]};
@@ -240,25 +241,25 @@ function renderTree(){
 }
 
 function treeBranch(node,path){
+ const key=path.join("/");
  const branch=document.createElement("div");
  branch.className="treeBranch";
  const row=document.createElement("div");
  const childNames=Object.keys(node.folders||{}).sort();
- row.className="treeRow"+(currentPath.join("/")===path.join("/")?" active":"");
- row.innerHTML='<span class="treeToggle"></span><span class="rowIcon"><span class="folderIcon"></span></span><span class="rowText"></span>';
- row.querySelector(".treeToggle").textContent=childNames.length?">":"";
+ const opened=openFolders.has(key);
+ row.className="treeRow"+(currentPath.join("/")===key?" active":"");
+ row.innerHTML='<span class="treeToggle"></span><span class="rowIcon"></span><span class="rowText"></span>';
+ const tg=row.querySelector(".treeToggle");
+ tg.textContent=childNames.length?(opened?"▼":"▶"):"";
+ tg.onclick=(e)=>{e.stopPropagation(); if(openFolders.has(key))openFolders.delete(key); else openFolders.add(key); renderTree();};
+ row.querySelector(".rowIcon").textContent=opened?"📂":"📁";
  row.querySelector(".rowText").textContent=node.name;
- row.onclick=()=>{
-   currentPath=path;
-   selectedMemoId=null;
-   clearPreview();
-   renderAll();
- };
+ row.onclick=()=>{currentPath=path;selectedMemoId=null;clearPreview();renderAll();};
  branch.appendChild(row);
- if(childNames.length){
+ if(childNames.length && opened){
    const children=document.createElement("div");
    children.className="treeChildren";
-   childNames.forEach(name=>children.appendChild(treeBranch(node.folders[name],[...path,name])));
+   childNames.forEach(n=>children.appendChild(treeBranch(node.folders[n],[...path,n])));
    branch.appendChild(children);
  }
  return branch;
