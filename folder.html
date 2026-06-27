@@ -403,6 +403,8 @@ await updateDoc(
     }
 );
 
+console.log("Firestore更新完了");
+
 await loadMemos();
 
 alert("保存しました！");
@@ -506,6 +508,8 @@ document.getElementById("editMemoBtn").onclick=editSelectedMemo;
 
 
 async function loadMemos(){
+
+console.log("loadMemos 開始");
 
  const status=document.getElementById("status");
 
