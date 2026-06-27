@@ -50,6 +50,26 @@ button.export{background:var(--green)}
 .attachmentPreview iframe{width:100%;height:360px;border:1px solid var(--line);border-radius:8px}
 .attachmentPreview pre{max-height:360px;overflow:auto;background:#f8fbff;border:1px solid var(--line);border-radius:8px;padding:10px;white-space:pre-wrap}
 #exportMode{border:1px solid var(--line);border-radius:8px;padding:9px;background:#fff}
+
+.toast{
+position:fixed;
+right:20px;
+bottom:20px;
+background:#222;
+color:#fff;
+padding:12px 18px;
+border-radius:10px;
+opacity:0;
+transform:translateY(20px);
+transition:.25s;
+z-index:9999;
+pointer-events:none;
+}
+.toast.show{
+opacity:1;
+transform:translateY(0);
+}
+
 @media(max-width:980px){
  .layout{grid-template-columns:1fr}
  .pane{min-height:180px}
@@ -116,6 +136,7 @@ button.export{background:var(--green)}
     </section>
   </div>
 </div>
+<div id="toast" class="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -362,6 +383,15 @@ async function getAttachmentBlob(file){
  return await fetch(file.url).then(res=>res.blob());
 }
 
+
+function showToast(message){
+ const t=document.getElementById("toast");
+ t.textContent=message;
+ t.classList.add("show");
+ clearTimeout(window.__toastTimer);
+ window.__toastTimer=setTimeout(()=>t.classList.remove("show"),1800);
+}
+
 function clearPreview(){
  selectedMemoId=null;
  document.getElementById("previewTitle").textContent="プレビュー";
@@ -374,7 +404,7 @@ function clearPreview(){
 async function editSelectedMemo(){
 
     if(!selectedMemoId){
-        alert("先にメモを選択してください。");
+        showToast("先にメモを選択してください");
         return;
     }
 
@@ -383,7 +413,7 @@ async function editSelectedMemo(){
     );
 
     if(!memo){
-        alert("メモが見つかりません。");
+        showToast("メモが見つかりません");
         return;
     }
 
@@ -409,25 +439,22 @@ await updateDoc(
         text: newText
     }
 );
-
-console.log("Firestore更新完了");
-
 await loadMemos();
 
-alert("保存しました！");
+showToast("保存しました");
 }
 
 async function deleteSelectedMemo(){
 
     if(!selectedMemoId){
-        alert("先にメモを選択してください。");
+        showToast("先にメモを選択してください");
         return;
     }
 
     const memo=allMemos.find(m=>m.id===selectedMemoId);
 
     if(!memo){
-        alert("メモが見つかりません。");
+        showToast("メモが見つかりません");
         return;
     }
 
@@ -447,7 +474,7 @@ async function deleteSelectedMemo(){
 
     await loadMemos();
 
-    alert("削除しました！");
+    showToast("削除しました");
 }
 
 function goToPath(path){
@@ -516,7 +543,7 @@ async function exportData(){
    return;
  }
  if(!window.JSZip){
-   alert("ZIP作成ライブラリを読み込めませんでした。ネットワークを確認してください。");
+   showToast("ZIPライブラリの読み込みに失敗しました");
    return;
  }
  document.getElementById("status").textContent="ZIPを作成しています...";
@@ -548,10 +575,7 @@ document.getElementById("editMemoBtn").onclick=editSelectedMemo;
 document.getElementById("deleteMemoBtn").onclick=deleteSelectedMemo;
 
 async function loadMemos(){
-
-console.log("loadMemos 開始");
-
- const status=document.getElementById("status");
+const status=document.getElementById("status");
 
  status.textContent="メモを読み込んでいます...";
 
