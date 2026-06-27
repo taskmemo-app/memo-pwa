@@ -25,7 +25,7 @@ button.export{background:var(--green)}
 .crumbs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--line);background:#f8fbff}
 .crumb{background:transparent;color:var(--blue);padding:4px 2px}
 .row{display:flex;align-items:center;gap:8px;width:100%;padding:9px 10px;border-radius:6px;cursor:pointer}
-.row:hover,.row.active{background:var(--blue-soft)}
+.row:hover,.row.active{background:var(--blue-soft);outline:2px solid var(--blue);font-weight:700}
 .rowIcon{width:22px;display:inline-flex;justify-content:center;align-items:center}
 .folderIcon{width:18px;height:13px;border-radius:2px;background:#f8c84e;position:relative;display:inline-block;box-shadow:inset 0 -1px 0 rgba(0,0,0,.12)}
 .folderIcon:before{content:"";position:absolute;left:1px;top:-4px;width:9px;height:5px;border-radius:2px 2px 0 0;background:#f2b72f}
@@ -162,7 +162,24 @@ let root=createNode("ホーム");
 let allMemos=[];
 let currentPath=[];
 let selectedMemoId=null;
-let openFolders=new Set();
+const OPEN_FOLDERS_KEY="sb_openFolders";
+const SCROLL_KEY="sb_scrollTop";
+let openFolders=new Set(JSON.parse(localStorage.getItem(OPEN_FOLDERS_KEY)||"[]"));
+
+
+function saveOpenFolders(){
+ localStorage.setItem(OPEN_FOLDERS_KEY,JSON.stringify([...openFolders]));
+}
+function saveScrollPosition(){
+ const list=document.getElementById("itemList");
+ localStorage.setItem(SCROLL_KEY,String(list.scrollTop));
+}
+function restoreScrollPosition(){
+ const list=document.getElementById("itemList");
+ requestAnimationFrame(()=>{
+   list.scrollTop=Number(localStorage.getItem(SCROLL_KEY)||0);
+ });
+}
 
 function createNode(name){
  return {name,folders:{},memos:[]};
@@ -251,7 +268,7 @@ function treeBranch(node,path){
  row.innerHTML='<span class="treeToggle"></span><span class="rowIcon"></span><span class="rowText"></span>';
  const tg=row.querySelector(".treeToggle");
  tg.textContent=childNames.length?(opened?"▼":"▶"):"";
- tg.onclick=(e)=>{e.stopPropagation(); if(openFolders.has(key))openFolders.delete(key); else openFolders.add(key); renderTree();};
+ tg.onclick=(e)=>{e.stopPropagation(); if(openFolders.has(key))openFolders.delete(key); else openFolders.add(key); saveOpenFolders(); renderTree();};
  row.querySelector(".rowIcon").textContent=opened?"📂":"📁";
  row.querySelector(".rowText").textContent=node.name;
  row.onclick=()=>{currentPath=path;selectedMemoId=null;clearPreview();renderAll();};
@@ -317,7 +334,7 @@ function renderItems(){
    row.innerHTML='<span class="rowIcon"><span class="fileIcon"></span></span><span class="rowText"></span><span class="memoMeta"></span>';
    row.querySelector(".rowText").textContent=memo.title;
    row.querySelector(".memoMeta").textContent=count?`添付 ${count}`:(memo.created?new Date(memo.created).toLocaleDateString("ja-JP"):"");
-   row.onclick=()=>selectMemo(memo);
+   row.onclick=()=>{saveScrollPosition();selectMemo(memo);};
    list.appendChild(row);
  });
  if(Object.keys(node.folders).length===0 && memos.length===0){
@@ -615,6 +632,7 @@ const status=document.getElementById("status");
  }
 
  renderAll();
+ restoreScrollPosition();
 
  if(keepSelected){
    const memo=allMemos.find(m=>m.id===keepSelected);
