@@ -128,6 +128,8 @@ transform:translateY(0);
 
     <button id="pinMemoBtn">📌 ピン留め</button>
 
+    <button id="editTagsBtn">🏷️ タグ編集</button>
+
     <button id="deleteMemoBtn">
         削除
     </button>
@@ -480,6 +482,21 @@ async function togglePinned(){
  showToast(!memo.pinned?"ピン留めしました":"ピン留め解除しました");
 }
 
+
+async function editTags(){
+ if(!selectedMemoId){showToast("先にメモを選択してください");return;}
+ const memo=allMemos.find(m=>m.id===selectedMemoId);
+ if(!memo)return;
+ const current=(memo.tags||[]).map(t=>"#"+t).join(" ");
+ const input=prompt("タグを入力（例: #資格 #基本情報）",current);
+ if(input===null)return;
+ const body=(memo.text||"").replace(/#\S+/g,"").trim();
+ const newText=(body+"\n"+input.trim()).trim();
+ await updateDoc(doc(db,"users",auth.currentUser.uid,"memos",memo.id),{text:newText});
+ await loadMemos();
+ showToast("タグを更新しました");
+}
+
 async function deleteSelectedMemo(){
 
     if(!selectedMemoId){
@@ -609,6 +626,7 @@ document.getElementById("exportBtn").onclick=exportData;
 
 document.getElementById("editMemoBtn").onclick=editSelectedMemo;
 document.getElementById("pinMemoBtn").onclick=togglePinned;
+document.getElementById("editTagsBtn").onclick=editTags;
 document.getElementById("deleteMemoBtn").onclick=deleteSelectedMemo;
 
 async function loadMemos(){
