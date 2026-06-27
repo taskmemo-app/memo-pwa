@@ -387,6 +387,13 @@ async function editSelectedMemo(){
         return;
     }
 
+    if(!confirm("このメモを削除しますか？")){
+        return;
+    }
+
+    alert("次のSTEPで削除します。");
+
+
 const newText = prompt(
     "メモを編集",
     memo.text
@@ -511,7 +518,7 @@ document.getElementById("searchInput").oninput=renderItems;
 document.getElementById("exportBtn").onclick=exportData;
 
 document.getElementById("editMemoBtn").onclick=editSelectedMemo;
-
+document.getElementById("deleteMemoBtn").onclick=deleteSelectedMemo;
 
 async function loadMemos(){
 
