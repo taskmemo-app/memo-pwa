@@ -423,6 +423,31 @@ await loadMemos();
 alert("保存しました！");
 }
 
+async function deleteSelectedMemo(){
+
+    if(!selectedMemoId){
+        alert("先にメモを選択してください。");
+        return;
+    }
+
+    const memo = allMemos.find(
+        m => m.id === selectedMemoId
+    );
+
+    if(!memo){
+        alert("メモが見つかりません。");
+        return;
+    }
+
+    if(!confirm("このメモを削除しますか？")){
+        return;
+    }
+
+    alert("次のSTEPで削除します。");
+
+}
+
+
 function goToPath(path){
  currentPath=path;
  clearPreview();
