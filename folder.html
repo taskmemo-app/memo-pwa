@@ -100,11 +100,17 @@ button.export{background:var(--green)}
         <pre id="previewBody" class="preview">メモを選択すると内容が表示されます。</pre>
         <div id="previewTags" class="tags"></div>
         <div id="previewAttachments" class="attachments"></div>
-   	<div style="margin-top:16px">
-        <button id="editMemoBtn">
-            編集
-        </button>
-    	</div>
+<div style="margin-top:16px;display:flex;gap:10px">
+
+    <button id="editMemoBtn">
+        編集
+    </button>
+
+    <button id="deleteMemoBtn">
+        削除
+    </button>
+
+</div>
         <div id="attachmentPreview" class="attachmentPreview"></div>
       </div>
     </section>
