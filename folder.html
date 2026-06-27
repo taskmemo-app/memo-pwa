@@ -502,20 +502,17 @@ document.getElementById("exportBtn").onclick=exportData;
 
 document.getElementById("editMemoBtn").onclick=editSelectedMemo;
 
-onAuthStateChanged(auth,async(user)=>{
+
+async function loadMemos(){
+
  const status=document.getElementById("status");
- if(!user){
-   status.textContent="ログインしていません。先にメモ入力画面でログインしてください。";
-   root=createNode("ホーム");
-   allMemos=[];
-   currentPath=[];
-   clearPreview();
-   renderAll();
-   return;
- }
+
  status.textContent="メモを読み込んでいます...";
- const snap=await getDocs(collection(db,"users",user.uid,"memos"));
+
+ const snap=await getDocs(collection(db,"users",auth.currentUser.uid,"memos"));
+
  allMemos=[];
+
  snap.forEach(docSnap=>{
    const data={id:docSnap.id,...docSnap.data()};
    data.tags=extractTags(data.text||"");
@@ -523,14 +520,60 @@ onAuthStateChanged(auth,async(user)=>{
    data.attachments=data.attachments||[];
    allMemos.push(data);
  });
- allMemos.sort((a,b)=>(Number(b.pinned)-Number(a.pinned))||((b.created||0)-(a.created||0)));
+
+ allMemos.sort((a,b)=>
+   (Number(b.pinned)-Number(a.pinned))
+   ||
+   ((b.created||0)-(a.created||0))
+ );
+
  root=buildTree(allMemos);
+
  currentPath=[];
+
  selectedMemoId=null;
+
  clearPreview();
+
  renderAll();
- status.textContent=`${user.displayName||"ログイン中"} のメモ ${allMemos.length}件`;
+
+ status.textContent=`${auth.currentUser.displayName||"ログイン中"} のメモ ${allMemos.length}件`;
+
+}
+
+
+onAuthStateChanged(auth,async(user)=>{
+
+ const status=document.getElementById("status");
+
+ if(!user){
+
+   status.textContent="ログインしていません。先にメモ入力画面でログインしてください。";
+
+   root=createNode("ホーム");
+   allMemos=[];
+   currentPath=[];
+
+   clearPreview();
+
+   renderAll();
+
+   return;
+ }
+
+ await loadMemos();
+
 });
+
+
+
+
+
+
+
+
+
+
 </script>
 </body>
 </html>
